@@ -27,7 +27,7 @@ angular.module('vesseltrack.app')
                 lonStr = "0" + lonStr;
             }
 
-            return (hours / 1000.0).toFixed(3).substring(2) + " " + lonStr + ns;
+            return (hours / 1000.0).toFixed(3).substring(2) + "° " + lonStr + "'" + ns;
         }
 
         /**
@@ -49,7 +49,7 @@ angular.module('vesseltrack.app')
                 latStr = "0" + latStr;
             }
 
-            return (hours / 100.0).toFixed(2).substring(2) + " " + latStr + ns;
+            return (hours / 100.0).toFixed(2).substring(2) + "° " + latStr + "'" + ns;
         }
 
         /**

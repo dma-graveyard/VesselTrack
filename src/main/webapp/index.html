@@ -15,6 +15,7 @@
     <link href="/ext/bootstrap-3.3.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="/ext/bootstrap-3.3.1/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/ext/openlayers-2.13.1/style.css" rel="stylesheet">
+    <link href="/ext/font-awesome-4.3.0/css/font-awesome.min.css" rel="stylesheet">
 
     <link href="css/app.css" rel="stylesheet">
 
@@ -36,7 +37,7 @@
                     <span class="info-panel-selector-txt">Search</span>
                 </span>
                 <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('details')" ng-class="{true:'active'}[activeInfoPanel == 'details']">
-                    <span class="glyphicon glyphicon-map-marker"></span>
+                    <span class="fa fa-ship"></span>
                     <span class="info-panel-selector-txt">Details</span>
                 </span>
             </div>
@@ -111,7 +112,7 @@
                 </tr>
                 <tr ng-if="selVessel.lastReport">
                     <td class="details-title">Last Report</td>
-                    <td class="details-value">{{selVessel.lastReport}}</td>
+                    <td class="details-value">{{formatDate(selVessel.lastReport)}}</td>
                 </tr>
             </table>
             <div ng-if="selVessel" class="vessel-lookup">

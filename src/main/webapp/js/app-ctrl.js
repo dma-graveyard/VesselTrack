@@ -146,7 +146,7 @@ angular.module('vesseltrack.app')
             $scope.map.addControl(new OpenLayers.Control.Zoom());
 
             /*********************************/
-            /* Interactive Functionality     */
+            /* Interactive Map Functionality */
             /*********************************/
 
             /**
@@ -220,6 +220,10 @@ angular.module('vesseltrack.app')
                 });
             vesselSelect.activate();
 
+            /*********************************/
+            /* Utility Functions             */
+            /*********************************/
+
             /**
              * Toggle show the given info panel
              * @param panel the panel to show or hide
@@ -232,10 +236,6 @@ angular.module('vesseltrack.app')
                 }
             };
 
-            /*********************************/
-            /* Vessel Loading                */
-            /*********************************/
-
             $scope.vesselType = function (type) {
                 return VesselTrackService.vesselType(type);
             };
@@ -243,6 +243,15 @@ angular.module('vesseltrack.app')
             $scope.navStatus = function (status) {
                 return VesselTrackService.navStatus(status);
             };
+
+            $scope.formatDate = function (timestamp) {
+                return moment(timestamp).format('MMMM Do, HH:mm:ss');
+            };
+
+
+            /*********************************/
+            /* Vessel Loading                */
+            /*********************************/
 
             /**
              * Creates an OpenLayer point properly transformed

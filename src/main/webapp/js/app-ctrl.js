@@ -18,6 +18,7 @@ angular.module('vesseltrack.app')
             $scope.bounds = undefined;
             $scope.map = undefined;
             $scope.vesselScale = 0.7;
+            $scope.detaultSelectZoom = 10;
 
             /**
              * Schedules the loading of vessel for the given bounds
@@ -256,11 +257,11 @@ angular.module('vesseltrack.app')
             };
 
             /** Centers the map on the given position **/
-            $scope.setCenter = function(longitude, latitude) {
+            $scope.setCenter = function(longitude, latitude, zoom) {
                 var pos = new OpenLayers.LonLat(longitude, latitude).transform(proj4326, projmerc);
 
                 // set position to find center in pixels
-                $scope.map.setCenter(pos, 10);
+                $scope.map.setCenter(pos, zoom ? zoom : $scope.detaultSelectZoom);
             };
 
             /** Periodically check if a followed vessel has strayed way from the center **/
@@ -270,7 +271,7 @@ angular.module('vesseltrack.app')
                     var pos = $scope.map.getPixelFromLonLat(new OpenLayers.LonLat($scope.selVessel.lon, $scope.selVessel.lat).transform(proj4326, projmerc));
                     var pixelDist = lineDistance(center, pos);
                     if (pixelDist > 10) {
-                        $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat);
+                        $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat, $scope.selVessel.followZoom);
                         console.log("Re-center map");
                     }
                 }
@@ -281,7 +282,8 @@ angular.module('vesseltrack.app')
                 function() { return $scope.selVessel != null && $scope.selVessel.follow },
                 function(data) {
                     if ($scope.selVessel && $scope.selVessel.follow) {
-                        $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat);
+                        $scope.selVessel.followZoom = $scope.mapSettings.zoom;
+                        $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat, $scope.selVessel.followZoom);
                     }
                  },
                 true);

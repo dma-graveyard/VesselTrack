@@ -248,6 +248,40 @@ angular.module('vesseltrack.app')
                 return moment(timestamp).format('MMMM Do, HH:mm:ss');
             };
 
+            $scope.marineTraffic = function (mmsi) {
+                window.open('http://www.marinetraffic.com/ais/shipdetails.aspx?mmsi=' + mmsi, '_blank');
+            };
+
+            $scope.setCenter = function(longitude, latitude) {
+                var pos = new OpenLayers.LonLat(longitude, latitude).transform(proj4326, projmerc);
+
+                // set position to find center in pixels
+                $scope.map.setCenter(pos, 10);
+            };
+
+            // Periodically check if a followed vessel has strayed way from the center
+            $interval(function () {
+                if ($scope.selVessel && $scope.selVessel.follow) {
+                    var center = $scope.map.getPixelFromLonLat($scope.map.center);
+                    var pos = $scope.map.getPixelFromLonLat(new OpenLayers.LonLat($scope.selVessel.lon, $scope.selVessel.lat).transform(proj4326, projmerc));
+                    var pixelDist = lineDistance(center, pos);
+                    if (pixelDist > 10) {
+                        $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat);
+                        console.log("Re-center map");
+                    }
+                }
+            }, 60000 + (Math.random() * 10.0 - 5.0));
+
+            // If "follow" is turned on, center the map on the selected vessel
+            $scope.$watch(
+                function() { return $scope.selVessel != null && $scope.selVessel.follow },
+                function(data) {
+                    if ($scope.selVessel && $scope.selVessel.follow) {
+                        $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat);
+                    }
+                 },
+                true);
+
 
             /*********************************/
             /* Vessel Loading                */
@@ -306,16 +340,17 @@ angular.module('vesseltrack.app')
              */
             $scope.generateVesselFeatures = function (vessels) {
                 var features = [];
+
                 $.each(vessels, function (mmsi, vessel) {
                     // Check that the vessel has a valid position
-                    if (features.length < 10000 && vessel.length > 2 && vessel[0] && vessel[1]) {
+                    if (features.length < 10000 && vessel[0] && vessel[1]) {
                         features.push($scope.generateVesselFeature(mmsi, vessel));
+                        $scope.checkUpdateSelectedVessel(mmsi, vessel);
                     }
                 });
                 vesselLayer.removeAllFeatures();
                 vesselLayer.addFeatures(features);
                 vesselLayer.redraw();
-                console.log("Added " + features.length + " vessels")
             };
 
             /**
@@ -333,6 +368,7 @@ angular.module('vesseltrack.app')
                            deleteFeatures.push(feature);
                        } else {
                            vessel.existing = true;
+                           // Check if the vessel has a newer last-report date
                            if (feature.attributes.vessel[5] < vessel[5]) {
                                deleteFeatures.push(feature);
                                vessel.existing = false; // We need to add it again
@@ -348,12 +384,30 @@ angular.module('vesseltrack.app')
                 var features = [];
                 $.each(vessels, function (mmsi, vessel) {
                     // Check that the vessel has a valid position
-                    if (!vessel.existing && features.length < 10000 && vessel.length > 2 && vessel[0] && vessel[1]) {
+                    if (!vessel.existing && features.length < 10000 && vessel[0] && vessel[1]) {
                         features.push($scope.generateVesselFeature(mmsi, vessel));
+                        $scope.checkUpdateSelectedVessel(mmsi, vessel);
                     }
                 });
                 vesselLayer.addFeatures(features);
                 vesselLayer.redraw();
+            };
+
+            /**
+             * Check if the selected vessel needs to be updated
+             * @return if the position was updated
+             */
+            $scope.checkUpdateSelectedVessel = function (mmsi, vessel) {
+                if ($scope.selVessel && $scope.selVessel.mmsi == mmsi && $scope.selVessel.lastReport < vessel[5]) {
+                    console.log("Updating selected MMSI ");
+                    $scope.selVessel.lat = vessel[0];
+                    $scope.selVessel.lon = vessel[1];
+                    $scope.selVessel.cog = vessel[2];
+                    $scope.selVessel.vesselType = vessel[3];
+                    $scope.selVessel.navStatus = vessel[4];
+                    $scope.selVessel.lastReport = vessel[5];
+                    $scope.selVessel.name = vessel[6];
+                }
             };
 
             /**

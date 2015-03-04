@@ -38,8 +38,7 @@ public class VesselTargetVo implements Serializable {
     AisTargetType targetType;
     int mmsi;
     String country;
-    Date lastReport;
-    Date lastPosReport;
+    Long lastReport;
     Float lat;
     Float lon;
     Float cog;
@@ -55,7 +54,7 @@ public class VesselTargetVo implements Serializable {
     Float draught;
     Integer navStatus;
     Boolean moored;
-    Date eta;
+    Long eta;
     int vesselType;
 
     public VesselTargetVo() {
@@ -69,7 +68,7 @@ public class VesselTargetVo implements Serializable {
         mmsi = t.getMmsi();
         targetType = t.getTargetType();
         country = t.getCountry();
-        lastReport = t.getLastReport();
+        lastReport = t.getLastReport() != null ? t.getLastReport().getTime() : null;
 
         // Position data
         sog = t.getSog();
@@ -89,7 +88,7 @@ public class VesselTargetVo implements Serializable {
         width = t.getWidth();
         destination = t.getDestination();
         draught = t.getDraught();
-        eta = t.getEta();
+        eta = t.getEta() != null ? t.getEta().getTime() : null;
         imoNo = t.getImoNo();
     }
 
@@ -126,20 +125,12 @@ public class VesselTargetVo implements Serializable {
         this.country = country;
     }
 
-    public Date getLastReport() {
+    public Long getLastReport() {
         return lastReport;
     }
 
-    public void setLastReport(Date lastReport) {
+    public void setLastReport(Long lastReport) {
         this.lastReport = lastReport;
-    }
-
-    public Date getLastPosReport() {
-        return lastPosReport;
-    }
-
-    public void setLastPosReport(Date lastPosReport) {
-        this.lastPosReport = lastPosReport;
     }
 
     public Float getLat() {
@@ -262,11 +253,11 @@ public class VesselTargetVo implements Serializable {
         this.moored = moored;
     }
 
-    public Date getEta() {
+    public Long getEta() {
         return eta;
     }
 
-    public void setEta(Date eta) {
+    public void setEta(Long eta) {
         this.eta = eta;
     }
 

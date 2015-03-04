@@ -57,6 +57,7 @@
         </div>
 
         <div id="vessel-details" ng-if="activeInfoPanel == 'details'">
+            <div ng-if="!selVessel" style="font-size: 11px; margin: 5px; text-align: center;">No vessel selected</div>
             <table ng-if="selVessel" class="details-table">
                 <tr>
                     <td class="details-title">MMSI</td>
@@ -82,6 +83,10 @@
                     <td class="details-title">Heading</td>
                     <td class="details-value">{{selVessel.heading}}&deg;</td>
                 </tr>
+                <tr ng-if="selVessel.lat && selVessel.lon">
+                    <td class="details-title">Position</td>
+                    <td class="details-value">{{selVessel | lonlat}}</td>
+                </tr>
                 <tr ng-if="selVessel.destination">
                     <td class="details-title">Destination</td>
                     <td class="details-value">{{selVessel.destination}}</td>
@@ -89,10 +94,6 @@
                 <tr ng-if="selVessel.navStatus">
                     <td class="details-title">Nav Status</td>
                     <td class="details-value">{{navStatus(selVessel.navStatus)}}</td>
-                </tr>
-                <tr ng-if="selVessel.lat && selVessel.lon">
-                    <td class="details-title">Position</td>
-                    <td class="details-value">{{selVessel | lonlat}}</td>
                 </tr>
                 <tr ng-if="selVessel.vesselType">
                     <td class="details-title">Type</td>
@@ -115,8 +116,31 @@
                     <td class="details-value">{{formatDate(selVessel.lastReport)}}</td>
                 </tr>
             </table>
-            <div ng-if="selVessel" class="vessel-lookup">
-                Lookup at <a target="_blank" href="http://www.marinetraffic.com/ais/shipdetails.aspx?mmsi={{selVessel.mmsi}}">marinetraffic.com</a>
+            <div ng-if="selVessel" class="vessel-actions">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <button type="button" class="btn btn-xs btn-default vessel-btn" ng-click="setCenter(selVessel.lon, selVessel.lat)">
+                            <span class="glyphicon glyphicon-screenshot"></span>&nbsp;Zoom To
+                        </button>
+                    </div>
+                    <div class="col-lg-6">
+                        <button type="button" class="btn btn-xs btn-default vessel-btn" btn-checkbox ng-model="selVessel.follow">
+                            <span class="glyphicon glyphicon-lock"></span>&nbsp;Follow
+                        </button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-6" style="margin-top: 5px;">
+                        <button type="button" class="btn btn-xs btn-default vessel-btn" ng-click="setCenter(selVessel.lon, selVessel.lat, 9)">
+                            <span class="glyphicon glyphicon-time"></span>&nbsp;Past Tracks
+                        </button>
+                    </div>
+                    <div class="col-lg-6" style="margin-top: 5px;">
+                        <button type="button" class="btn btn-xs btn-default vessel-btn" ng-click="marineTraffic(selVessel.mmsi)">
+                            <span class="fa fa-external-link"></span>&nbsp;MarineTraffic
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 

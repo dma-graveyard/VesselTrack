@@ -23,6 +23,11 @@ body {
     -o-user-select: none;
 }
 
+/** Disable button focus **/
+.btn:focus,.btn:active {
+    outline: none !important;
+}
+
 /* Hide OSM link and zoom buttons (small screen) */
 .olControlNoSelect {
     display: none;
@@ -141,9 +146,13 @@ body {
     font-size: 10px;
 }
 
-.vessel-lookup {
-    border-top: 1px solid gray;
+.vessel-actions {
     text-align: center;
     font-size: 10px;
-    padding: 5px 20px 5px 20px;
+    padding: 5px 10px;
+}
+
+.vessel-btn {
+    font-size: 10px;
+    width: 90px;
 }

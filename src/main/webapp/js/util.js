@@ -68,3 +68,21 @@ function formatSeriesIdentifier(msg) {
     return '';
 }
 
+/**
+ * Computes the distance between two points
+ * @param point1 the first point
+ * @param point2 the second point
+ * @return the distance
+ */
+function lineDistance( point1, point2 ) {
+    var xs = 0;
+    var ys = 0;
+
+    xs = point2.x - point1.x;
+    xs = xs * xs;
+
+    ys = point2.y - point1.y;
+    ys = ys * ys;
+
+    return Math.sqrt( xs + ys );
+}

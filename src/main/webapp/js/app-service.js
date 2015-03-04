@@ -9,7 +9,6 @@ angular.module('vesseltrack.app')
         'use strict';
 
         var storage = $window.sessionStorage;
-        var vesselScale = 0.7;
 
         return {
 
@@ -44,17 +43,19 @@ angular.module('vesseltrack.app')
             /**
              * fetches all vessels within the given bounds
              */
-            fetchVessels: function(bounds, success, error) {
+            fetchVessels: function(bounds, mmsi, success, error) {
                 $http.get('/vessels/list'
                     + '?top=' + bounds.top
                     + '&left=' + bounds.left
                     + '&bottom=' + bounds.bottom
-                    + '&right=' + bounds.right)
+                    + '&right=' + bounds.right
+                    + (mmsi ? '&mmsi=' + mmsi : ''))
                     .success(success)
                     .error(error);
             },
 
-            vesselGraphics: function(type, status) {
+            /** Create feature attributes for the vessel graphics **/
+            vesselGraphics: function(type, status, vesselScale) {
                 var col;
                 switch (type) {
                     case 18: // Passenger
@@ -103,6 +104,18 @@ angular.module('vesseltrack.app')
                 }
             },
 
+            /** Create feature attributes for the vessel selection graphics **/
+            vesselSelectGraphics: function (vesselScale) {
+                return {
+                    image: "img/vessel/selection.png",
+                    width : function() { return 32 * vesselScale; },
+                    height : function() { return 32 * vesselScale; },
+                    offsetY : function() { return -16 * vesselScale; },
+                    offsetX : function() { return -16 * vesselScale; }
+                }
+            },
+
+            /** Returns if the vessel status indicates a moored vessel **/
             moored: function(status) {
                 return status == 1 || status == 5;
             },

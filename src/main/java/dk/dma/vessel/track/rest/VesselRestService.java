@@ -15,8 +15,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -58,6 +62,7 @@ public class VesselRestService  {
      * @param left the left longitude
      * @param bottom the bottom latitude
      * @param right the right longitude
+     * @param mmsi optionally, a list of mmsi to include
      * @return the list of vessels within the bounds
      */
     @RequestMapping(
@@ -69,14 +74,15 @@ public class VesselRestService  {
             @RequestParam(value="top", defaultValue = "90") Float top,
             @RequestParam(value="left", defaultValue = "-180") Float left,
             @RequestParam(value="bottom", defaultValue = "-90") Float bottom,
-            @RequestParam(value="right", defaultValue = "180") Float right
+            @RequestParam(value="right", defaultValue = "180") Float right,
+            @RequestParam(value="mmsi", required = false) Integer[] mmsi
     ) throws Exception {
 
         long t0 = System.currentTimeMillis();
         Map<String, Object[]> result = new HashMap<>();
 
         handler.getVesselStore().list().stream()
-                .filter(withinOpenLayersBounds(top, left, bottom, right))
+                .filter(withinOpenLayersBoundsOrMmsi(top, left, bottom, right, mmsi))
                 .forEach(v -> {
                     Object[] data = new Object[7];
                     int i = 0;
@@ -109,18 +115,34 @@ public class VesselRestService  {
     }
 
     /**
-     * A predicate that filters for vessels that are withing the given OpenLayers bounds
+     * A predicate that filters for vessels that are withing the given OpenLayers bounds or in the list of MMSI
      * @param top the top latitude
      * @param left the left longitude
      * @param bottom the bottom latitude
      * @param right the right longitude
+     * @param mmsi optionally, a list of mmsi to include
      * @return if the vessel is withing the given bounds
      */
-    private static Predicate<VesselTarget> withinOpenLayersBounds(float top, float left, float bottom, float right) {
-        return t ->
-                t.getLat() != null && t.getLon() != null &&
-                t.getLat() <= top && t.getLat() >= bottom &&
-                withinOpenLayersLongitude(t.getLon(), left, right);
+    private static Predicate<VesselTarget> withinOpenLayersBoundsOrMmsi(float top, float left, float bottom, float right, Integer[] mmsi) {
+        final Set<Integer> mmsiLookup = new HashSet<>();
+        if (mmsi != null && mmsi.length > 0) {
+            mmsiLookup.addAll(Arrays.asList(mmsi));
+        }
+        return t -> {
+            // Must have a valid position
+            if (t.getLat() == null && t.getLon() == null) {
+                return false;
+            }
+
+            // Check if the mmsi param has been specified
+            if (mmsiLookup.size() > 0 && mmsiLookup.contains(t.getMmsi())) {
+                return true;
+            }
+
+            // Check that the vessel is within the bounds
+            return  t.getLat() <= top && t.getLat() >= bottom &&
+                    withinOpenLayersLongitude(t.getLon(), left, right);
+        };
     }
 
     /**

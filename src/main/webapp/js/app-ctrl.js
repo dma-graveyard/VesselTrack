@@ -6,8 +6,8 @@ angular.module('vesseltrack.app')
     /**
      * The main VesselTrack controller
      */
-    .controller('VesselTrackCtrl', ['$scope', '$timeout', '$interval', 'VesselTrackService',
-        function ($scope, $timeout, $interval, VesselTrackService) {
+    .controller('VesselTrackCtrl', ['$scope', '$rootScope', '$timeout', '$interval', 'VesselTrackService',
+        function ($scope, $rootScope, $timeout, $interval, VesselTrackService) {
             'use strict';
 
             var proj4326 = new OpenLayers.Projection("EPSG:4326");
@@ -17,6 +17,7 @@ angular.module('vesseltrack.app')
             $scope.mapSettings = VesselTrackService.mapSettings();
             $scope.bounds = undefined;
             $scope.map = undefined;
+            $scope.vesselScale = 0.7;
 
             /**
              * Schedules the loading of vessel for the given bounds
@@ -90,8 +91,8 @@ angular.module('vesseltrack.app')
                         externalGraphic : "${image}",
                         graphicWidth : "${width}",
                         graphicHeight : "${height}",
-                        graphicYOffset : "${offsetX}",
-                        graphicXOffset : "${offsetY}",
+                        graphicXOffset : "${offsetX}",
+                        graphicYOffset : "${offsetY}",
                         rotation : "${angle}",
                         graphicOpacity : "${transparency}"
                     })
@@ -113,16 +114,12 @@ angular.module('vesseltrack.app')
             var selectionLayer = new OpenLayers.Layer.Vector("Selection", {
                 styleMap : new OpenLayers.StyleMap({
                     "default" : new OpenLayers.Style({
-                        externalGraphic : "/img/vessel/selection.png",
+                        externalGraphic : "${image}",
                         graphicWidth : "${width}",
                         graphicHeight : "${height}",
-                        graphicYOffset : "${offsetX}",
-                        graphicXOffset : "${offsetY}",
+                        graphicXOffset : "${offsetX}",
+                        graphicYOffset : "${offsetY}",
                         rotation : "${angle}"
-                    }),
-                    "select" : new OpenLayers.Style({
-                        cursor : "crosshair",
-                        externalGraphic : "/img/vessel/selection.png"
                     })
                 })
             });
@@ -167,7 +164,7 @@ angular.module('vesseltrack.app')
                 vesselLayer, {
                     hover: true,
                     onBeforeSelect: function(feature) {
-                        if (feature.popup) {
+                        if ($scope.tooltip) {
                             return;
                         }
 
@@ -175,7 +172,7 @@ angular.module('vesseltrack.app')
                         var html = formatTooltip(feature);
 
                         // add code to create tooltip/popup
-                        feature.popup = new OpenLayers.Popup.Anchored(
+                        $scope.tooltip = new OpenLayers.Popup.Anchored(
                             "tooltip",
                             new OpenLayers.LonLat(b.left, b.bottom),
                             new OpenLayers.Size(150, 30 + 18 *  html.occurrences("<br />")),
@@ -184,21 +181,21 @@ angular.module('vesseltrack.app')
                             false,
                             null);
 
-                        feature.popup.backgroundColor = '#eeeeee';
-                        feature.popup.calculateRelativePosition = function () {
+                        $scope.tooltip.backgroundColor = '#eeeeee';
+                        $scope.tooltip.calculateRelativePosition = function () {
                             return 'bl';
                         };
 
 
-                        $scope.map.addPopup(feature.popup);
+                        $scope.map.addPopup($scope.tooltip);
                         return true;
                     },
                     onUnselect: function(feature) {
                         // remove tooltip
-                        if (feature.popup) {
-                            $scope.map.removePopup(feature.popup);
-                            feature.popup.destroy();
-                            feature.popup=null;
+                        if ($scope.tooltip) {
+                            $scope.map.removePopup($scope.tooltip);
+                            $scope.tooltip.destroy();
+                            $scope.tooltip=null;
                         }
                     }
                 });
@@ -212,6 +209,8 @@ angular.module('vesseltrack.app')
                         var feature = this.layer.getFeatureFromEvent(evt);
                         if (feature && feature.attributes && feature.attributes.mmsi) {
                             $scope.onVesselSelect(feature);
+                        } else {
+                            $scope.onVesselSelect(null);
                         }
                     }
                 }, {
@@ -236,22 +235,27 @@ angular.module('vesseltrack.app')
                 }
             };
 
+            /** Returns the textual vessel type **/
             $scope.vesselType = function (type) {
                 return VesselTrackService.vesselType(type);
             };
 
+            /** Returns the textual nav status **/
             $scope.navStatus = function (status) {
                 return VesselTrackService.navStatus(status);
             };
 
+            /** Formats the timestamp as a textual date **/
             $scope.formatDate = function (timestamp) {
                 return moment(timestamp).format('MMMM Do, HH:mm:ss');
             };
 
+            /** Opens the given MMSI in marinetraffic.com **/
             $scope.marineTraffic = function (mmsi) {
                 window.open('http://www.marinetraffic.com/ais/shipdetails.aspx?mmsi=' + mmsi, '_blank');
             };
 
+            /** Centers the map on the given position **/
             $scope.setCenter = function(longitude, latitude) {
                 var pos = new OpenLayers.LonLat(longitude, latitude).transform(proj4326, projmerc);
 
@@ -259,7 +263,7 @@ angular.module('vesseltrack.app')
                 $scope.map.setCenter(pos, 10);
             };
 
-            // Periodically check if a followed vessel has strayed way from the center
+            /** Periodically check if a followed vessel has strayed way from the center **/
             $interval(function () {
                 if ($scope.selVessel && $scope.selVessel.follow) {
                     var center = $scope.map.getPixelFromLonLat($scope.map.center);
@@ -272,7 +276,7 @@ angular.module('vesseltrack.app')
                 }
             }, 60000 + (Math.random() * 10.0 - 5.0));
 
-            // If "follow" is turned on, center the map on the selected vessel
+            /** If "follow" is turned on, center the map on the selected vessel **/
             $scope.$watch(
                 function() { return $scope.selVessel != null && $scope.selVessel.follow },
                 function(data) {
@@ -306,6 +310,7 @@ angular.module('vesseltrack.app')
             $scope.fetchVessels = function(bounds, update) {
                 VesselTrackService.fetchVessels(
                     bounds,
+                    $scope.selVessel ? $scope.selVessel.mmsi : undefined,
                     function (vessels) {
                         if (update) {
                             $scope.updateVesselFeatures(vessels);
@@ -326,7 +331,7 @@ angular.module('vesseltrack.app')
              * @returns the vessel feature
              */
             $scope.generateVesselFeature = function(mmsi, vessel) {
-                var attr = VesselTrackService.vesselGraphics(vessel[3], vessel[4]);
+                var attr = VesselTrackService.vesselGraphics(vessel[3], vessel[4], $scope.vesselScale);
                 attr.mmsi = mmsi;
                 attr.angle = (vessel[2]) ? vessel[2] - 90 : 0;
                 attr.vessel = vessel;
@@ -340,17 +345,22 @@ angular.module('vesseltrack.app')
              */
             $scope.generateVesselFeatures = function (vessels) {
                 var features = [];
+                var selVesselPosUpdated = false;
 
                 $.each(vessels, function (mmsi, vessel) {
                     // Check that the vessel has a valid position
                     if (features.length < 10000 && vessel[0] && vessel[1]) {
                         features.push($scope.generateVesselFeature(mmsi, vessel));
-                        $scope.checkUpdateSelectedVessel(mmsi, vessel);
+                        selVesselPosUpdated |= $scope.checkUpdateSelectedVessel(mmsi, vessel);
                     }
                 });
                 vesselLayer.removeAllFeatures();
                 vesselLayer.addFeatures(features);
                 vesselLayer.redraw();
+
+                if (selVesselPosUpdated) {
+                    $scope.updateVesselSelectionFeature();
+                }
             };
 
             /**
@@ -382,23 +392,30 @@ angular.module('vesseltrack.app')
 
                 // Add new features
                 var features = [];
+                var selVesselPosUpdated = false;
                 $.each(vessels, function (mmsi, vessel) {
                     // Check that the vessel has a valid position
                     if (!vessel.existing && features.length < 10000 && vessel[0] && vessel[1]) {
                         features.push($scope.generateVesselFeature(mmsi, vessel));
-                        $scope.checkUpdateSelectedVessel(mmsi, vessel);
+                        selVesselPosUpdated |= $scope.checkUpdateSelectedVessel(mmsi, vessel);
                     }
                 });
                 vesselLayer.addFeatures(features);
                 vesselLayer.redraw();
+
+                if (selVesselPosUpdated) {
+                    $scope.updateVesselSelectionFeature();
+                }
             };
 
             /**
              * Check if the selected vessel needs to be updated
-             * @return if the position was updated
+             * @return if the position or COG was updated
              */
             $scope.checkUpdateSelectedVessel = function (mmsi, vessel) {
+                var posUpdate = false;
                 if ($scope.selVessel && $scope.selVessel.mmsi == mmsi && $scope.selVessel.lastReport < vessel[5]) {
+                    posUpdate = $scope.selVessel.lat != vessel[0] || $scope.selVessel.lon != vessel[1] || $scope.selVessel.cog != vessel[2];
                     console.log("Updating selected MMSI ");
                     $scope.selVessel.lat = vessel[0];
                     $scope.selVessel.lon = vessel[1];
@@ -408,6 +425,7 @@ angular.module('vesseltrack.app')
                     $scope.selVessel.lastReport = vessel[5];
                     $scope.selVessel.name = vessel[6];
                 }
+                return posUpdate;
             };
 
             /**
@@ -415,16 +433,41 @@ angular.module('vesseltrack.app')
              * @param feature the MSI feature
              */
             $scope.onVesselSelect = function(feature) {
+                $scope.selVessel = undefined;
                 hoverControl.unselectAll();
-                VesselTrackService.fetchVessel(
-                    feature.attributes.mmsi,
-                    function (vessel) {
-                        $scope.activeInfoPanel = 'details';
-                        $scope.selVessel = vessel;
-                    },
-                    function () {}
-                )
-            }
 
+                if (feature) {
+                    VesselTrackService.fetchVessel(
+                        feature.attributes.mmsi,
+                        function (vessel) {
+                            $scope.activeInfoPanel = 'details';
+                            $scope.selVessel = vessel;
+                            $scope.updateVesselSelectionFeature();
+                        },
+                        function () {}
+                    )
+                } else {
+                    // Remove the selection feature
+                    $scope.updateVesselSelectionFeature();
+                    if ($scope.activeInfoPanel == 'details') {
+                        $scope.activeInfoPanel = undefined;
+                        if (!$rootScope.$$phase) $rootScope.$apply();
+                    }
+                }
+            };
+
+            /**
+             * Updates the vessel selection feature
+             */
+            $scope.updateVesselSelectionFeature = function () {
+                selectionLayer.removeAllFeatures();
+                if ($scope.selVessel) {
+                    var geom = createPoint($scope.selVessel.lon, $scope.selVessel.lat);
+                    var attr = VesselTrackService.vesselSelectGraphics($scope.vesselScale);
+                    attr.angle = ($scope.selVessel.cog) ? $scope.selVessel.cog - 90 : 0;
+                    selectionLayer.addFeatures([ new OpenLayers.Feature.Vector(geom,attr) ]);
+                    selectionLayer.redraw();
+                }
+            };
 
         }]);

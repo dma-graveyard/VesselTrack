@@ -14,24 +14,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @ComponentScan
 @EnableScheduling
 public class Application {
-//        implements  WebSocketConfigurer {
 
     public static void main(String[] args) {
 
         SpringApplication.run(Application.class, args);
     }
 
-
-
-    /**
-    @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(echoEndpoint(), "/echo").withSockJS();
-    }
-
-    @Bean
-    public VesselEndpoint echoEndpoint() {
-        return new VesselEndpoint();
-    }
-    */
 }

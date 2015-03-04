@@ -6,8 +6,8 @@ angular.module('vesseltrack.app')
     /**
      * The main VesselTrack controller
      */
-    .controller('VesselTrackCtrl', ['$scope', '$timeout', '$interval', '$websocket', 'VesselTrackService',
-        function ($scope, $timeout, $interval, $websocket, VesselTrackService) {
+    .controller('VesselTrackCtrl', ['$scope', '$timeout', '$interval', 'VesselTrackService',
+        function ($scope, $timeout, $interval, VesselTrackService) {
             'use strict';
 
             var proj4326 = new OpenLayers.Projection("EPSG:4326");

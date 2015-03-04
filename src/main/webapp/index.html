@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html ng-app="vesseltrack.app">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="ROBOTS" content="NONE">
+    <meta name="GOOGLEBOT" content="NOARCHIVE">
+
+    <title>Vessel-Track</title>
+    <link rel="icon" href="img/vesseltrack_152.png" sizes="152x152" type="image/png" />
+    <link rel="apple-touch-icon" href="img/vesseltrack_152.png" sizes="152x152" type="image/png" />
+
+    <!-- CSS-->
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/theme/default/style.css">
+
+    <link href="css/app.css" rel="stylesheet">
+
+</head>
+<body ng-controller="VesselTrackCtrl">
+
+    <div id="map" style="width: 100%; height: 100%"></div>
+
+    <div class="info-panel">
+        <div style="text-align: center"><img class="logo" src="/img/logo.png"></div>
+        <div class="info-panel-selector">
+            <div>
+                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('legends')" ng-class="{true:'active'}[activeInfoPanel == 'legends']">
+                    <span class="glyphicon glyphicon-info-sign"></span>
+                    <span class="info-panel-selector-txt">Legends</span>
+                </span>
+                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('search')" ng-class="{true:'active'}[activeInfoPanel == 'search']">
+                    <span class="glyphicon glyphicon-search"></span>
+                    <span class="info-panel-selector-txt">Search</span>
+                </span>
+                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('details')" ng-class="{true:'active'}[activeInfoPanel == 'details']">
+                    <span class="glyphicon glyphicon-map-marker"></span>
+                    <span class="info-panel-selector-txt">Details</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="legends" ng-if="activeInfoPanel == 'legends'">
+            <div><img src="img/vessel/vessel_blue.png"/> Passenger</div>
+            <div><img src="img/vessel/vessel_green.png"/> Cargo</div>
+            <div><img src="img/vessel/vessel_red.png"/> Tanker</div>
+            <div><img src="img/vessel/vessel_yellow.png"/> High speed craft and WIG</div>
+            <div><img src="img/vessel/vessel_orange.png"/> Fishing</div>
+            <div><img src="img/vessel/vessel_purple.png"/> Sailing and pleasure</div>
+            <div><img src="img/vessel/vessel_turquoise.png"/> Pilot, tug and others</div>
+            <div><img src="img/vessel/vessel_gray.png"/> Undefined / unknown</div>
+            <div><img src="img/vessel/vessel_white.png"/> Sailing</div>
+            <div><img src="img/vessel/vessel_white_moored.png"/> Anchored/Moored</div>
+        </div>
+
+        <div id="vessel-details" ng-if="activeInfoPanel == 'details'">
+            <table ng-if="selVessel" class="details-table">
+                <tr>
+                    <td class="details-title">MMSI</td>
+                    <td class="details-value">{{selVessel.mmsi}}</td>
+                </tr>
+                <tr ng-if="selVessel.name">
+                    <td class="details-title">Name</td>
+                    <td class="details-value">{{selVessel.name}}</td>
+                </tr>
+                <tr ng-if="selVessel.callsign">
+                    <td class="details-title">Call Sign</td>
+                    <td class="details-value">{{selVessel.callsign}}</td>
+                </tr>
+                <tr ng-if="selVessel.sog">
+                    <td class="details-title">SOG</td>
+                    <td class="details-value">{{selVessel.sog}} kn</td>
+                </tr>
+                <tr ng-if="selVessel.cog">
+                    <td class="details-title">COG</td>
+                    <td class="details-value">{{selVessel.cog}}&deg;</td>
+                </tr>
+                <tr ng-if="selVessel.heading">
+                    <td class="details-title">Heading</td>
+                    <td class="details-value">{{selVessel.heading}}&deg;</td>
+                </tr>
+                <tr ng-if="selVessel.destination">
+                    <td class="details-title">Destination</td>
+                    <td class="details-value">{{selVessel.destination}}</td>
+                </tr>
+                <tr ng-if="selVessel.navStatus">
+                    <td class="details-title">Nav Status</td>
+                    <td class="details-value">{{navStatus(selVessel.navStatus)}}</td>
+                </tr>
+                <tr ng-if="selVessel.lat && selVessel.lon">
+                    <td class="details-title">Position</td>
+                    <td class="details-value">{{selVessel | lonlat}}</td>
+                </tr>
+                <tr ng-if="selVessel.vesselType">
+                    <td class="details-title">Type</td>
+                    <td class="details-value">{{vesselType(selVessel.vesselType)}}</td>
+                </tr>
+                <tr ng-if="selVessel.draught">
+                    <td class="details-title">Draught</td>
+                    <td class="details-value">{{selVessel.draught}} m</td>
+                </tr>
+                <tr ng-if="selVessel.width">
+                    <td class="details-title">Width</td>
+                    <td class="details-value">{{selVessel.width}} m</td>
+                </tr>
+                <tr ng-if="selVessel.length">
+                    <td class="details-title">Length</td>
+                    <td class="details-value">{{selVessel.length}} m</td>
+                </tr>
+                <tr ng-if="selVessel.lastReport">
+                    <td class="details-title">Last Report</td>
+                    <td class="details-value">{{selVessel.lastReport}}</td>
+                </tr>
+            </table>
+            <div ng-if="selVessel" class="vessel-lookup">
+                Lookup at <a target="_blank" href="http://www.marinetraffic.com/ais/shipdetails.aspx?mmsi={{selVessel.mmsi}}">marinetraffic.com</a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.11/angular.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.11/angular-route.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.11/angular-sanitize.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/0.12.0/ui-bootstrap-tpls.min.js"></script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.min.js"></script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.js"></script>
+
+    <script src="/ext/ng-websocket-0.2.1/ng-websocket.js"></script>
+
+    <script src="js/util.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/app-ctrl.js"></script>
+    <script src="js/app-service.js"></script>
+    <script src="js/app-filter.js"></script>
+
+</body>
+</html>

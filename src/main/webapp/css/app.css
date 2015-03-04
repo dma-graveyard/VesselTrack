@@ -1,0 +1,140 @@
+
+html {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #b5d0d0;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    left: 0;
+    top: 0;
+    background-color: #b5d0d0;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none;
+}
+
+/* Hide OSM link and zoom buttons (small screen) */
+.olControlNoSelect {
+    display: none;
+}
+
+/* Small screen definition */
+.logo {
+    width: 120px;
+    margin-bottom: 5px;
+}
+
+/* Small screen definition */
+.info-panel {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 5px;
+    background-color: darkgray;
+    opacity: 0.8;
+    z-index: 1000;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none;
+}
+
+/* Large screen definitions */
+@media (min-width: 400px) {
+    .olControlZoom {
+        display: block;
+    }
+
+    .logo {
+        width: 200px;
+        margin-bottom: 10px;
+    }
+
+    .info-panel {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: 240px;
+    }
+}
+
+.info-panel-selector {
+    height: 30px;
+    line-height: 30px;
+    color: lightgray;
+    text-align: center;
+    vertical-align: middle;
+    border-radius: 4px;
+    background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#444444), to(#555555));
+    background: -webkit-linear-gradient(top, #444444, #555555);
+    background: -moz-linear-gradient(top, #444444, #555555);
+    background: -ms-linear-gradient(top, #444444, #555555);
+}
+
+.info-panel-selector-btn {
+    margin: 0 5px 0 5px;
+    cursor: pointer;
+}
+
+.info-panel-selector .active {
+    color: #ffffff;
+}
+
+.info-panel-selector-txt {
+    display: inherit;
+    font-size: 9px;
+    padding-bottom: 3px;
+}
+
+.legends {
+    text-align: left;
+    font-size: 11px;
+    line-height: 14px;
+    padding: 0 0 5px 40px;
+}
+
+.legends img {
+    width: 16px;
+    margin-right: 5px;
+}
+
+.vessel-tooltip {
+    font-size: 10px;
+    line-height: 12px;
+}
+
+.vessel-tooltip div p {
+    margin: 0;
+    padding: 0;
+}
+
+.details-table {
+    margin: 0 5px 5px 20px;
+}
+
+.details-title {
+    font-size: 10px;
+    font-weight: bold;
+    padding-right: 10px;
+}
+
+.details-value {
+    font-size: 10px;
+}
+
+.vessel-lookup {
+    border-top: 1px solid gray;
+    text-align: center;
+    font-size: 10px;
+    padding: 5px 20px 5px 20px;
+}

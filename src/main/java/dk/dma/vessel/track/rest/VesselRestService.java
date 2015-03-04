@@ -3,6 +3,7 @@ package dk.dma.vessel.track.rest;
 import dk.dma.ais.message.NavigationalStatus;
 import dk.dma.ais.message.ShipTypeCargo;
 import dk.dma.vessel.track.VesselTrackHandler;
+import dk.dma.vessel.track.model.PastTrackPos;
 import dk.dma.vessel.track.model.VesselTarget;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,13 +16,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * REST API for accessing vessel information
@@ -100,6 +103,42 @@ public class VesselRestService  {
 
         return result;
     }
+
+    /**
+     * Returns the past track for the given MMSI
+     * @param mmsi the MMSI of the target
+     * @param minDist the minimum distance between past track positions
+     * @param ageStr the age of the past track positions
+     * @param response the servlet response
+     * @return the past track for the given MMSI
+     */
+    @RequestMapping(
+            value = "/track/{mmsi}",
+            method = RequestMethod.GET,
+            produces = "application/json;charset=UTF-8")
+    @ResponseBody
+    public List<PastTrackPosVo> getTrack(
+            @PathVariable("mmsi") Integer mmsi,
+            @RequestParam(value="minDist", required = false) Integer minDist,
+            @RequestParam(value="age", required = false) String ageStr,
+            HttpServletResponse response
+    ) {
+        long t0 = System.currentTimeMillis();
+        Duration age = null;
+        if (ageStr != null) {
+            age = Duration.parse(ageStr);
+        }
+        List<PastTrackPos> track = handler.getPastTracks(mmsi, minDist, age);
+        if (track == null) {
+            response.setStatus( HttpServletResponse.SC_BAD_REQUEST);
+            return null;
+        }
+        LOG.info(String.format("/track returned %d positions in %d ms", track.size(), System.currentTimeMillis() - t0));
+        return track.stream()
+                .map(PastTrackPosVo::new)
+                .collect(Collectors.toList());
+    }
+
 
     /**
      * Returns the ship type of the given vessel target

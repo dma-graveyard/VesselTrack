@@ -149,7 +149,13 @@ body {
 .vessel-actions {
     text-align: center;
     font-size: 10px;
-    padding: 5px 10px;
+    padding: 5px 5px;
+}
+
+.vessel-btn-col {
+    padding-left: 5px;
+    padding-right: 5px;
+    text-align: center;
 }
 
 .vessel-btn {

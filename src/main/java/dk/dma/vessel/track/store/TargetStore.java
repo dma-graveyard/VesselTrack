@@ -2,6 +2,7 @@ package dk.dma.vessel.track.store;
 
 import dk.dma.ais.message.AisMessage;
 import dk.dma.ais.packet.AisPacket;
+import dk.dma.vessel.track.model.PastTrack;
 import dk.dma.vessel.track.model.PastTrackPos;
 import dk.dma.vessel.track.model.VesselTarget;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import javax.annotation.Resource;
 import javax.persistence.EntityManager;
 import java.io.IOException;
 import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -57,6 +59,12 @@ public class TargetStore {
 
     @Value("${pastTrackExpire}")
     String pastTrackExpire;
+
+    @Value("${pastTrackTtl}")
+    String pastTrackTtl;
+
+    @Value("${pastTrackMinDist}")
+    String pastTrackMinDist;
 
     ConcurrentHashMap<Integer, VesselTarget> cache;
 
@@ -222,9 +230,17 @@ public class TargetStore {
             return result;
         }
 
-        // TODO: age and minDist
+        if (minDist == null) {
+            minDist = Integer.valueOf(pastTrackMinDist);
+        }
+
+        if (age == null) {
+            age = Duration.parse(pastTrackTtl);
+        }
+        ZonedDateTime date = ZonedDateTime.now().minus(age);
+
         result.addAll(em.createQuery(LOAD_PAST_TRACKS_SQL, PastTrackPos.class)
-                .setParameter("time", new Date(System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L))
+                .setParameter("time", Date.from(date.toInstant()))
                 .setParameter("mmsi", new Integer(mmsi))
                 .getResultList());
 
@@ -233,7 +249,7 @@ public class TargetStore {
             result.add(0, currentPos);
         }
 
-        return result;
+        return PastTrack.downSample(result, minDist, age.toMillis());
     }
 
 }

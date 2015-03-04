@@ -118,24 +118,35 @@
             </table>
             <div ng-if="selVessel" class="vessel-actions">
                 <div class="row">
-                    <div class="col-lg-6">
+                    <div class="col-xs-6 col-lg-6 vessel-btn-col">
                         <button type="button" class="btn btn-xs btn-default vessel-btn" ng-click="setCenter(selVessel.lon, selVessel.lat)">
                             <span class="glyphicon glyphicon-screenshot"></span>&nbsp;Zoom To
                         </button>
                     </div>
-                    <div class="col-lg-6">
+                    <div class="col-xs-6 col-lg-6 vessel-btn-col">
                         <button type="button" class="btn btn-xs btn-default vessel-btn" btn-checkbox ng-model="selVessel.follow">
                             <span class="glyphicon glyphicon-lock"></span>&nbsp;Follow
                         </button>
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-lg-6" style="margin-top: 5px;">
-                        <button type="button" class="btn btn-xs btn-default vessel-btn" ng-click="setCenter(selVessel.lon, selVessel.lat, 9)">
-                            <span class="glyphicon glyphicon-time"></span>&nbsp;Past Tracks
-                        </button>
+                    <div class="col-xs-6 col-lg-6 vessel-btn-col" style="margin-top: 5px;">
+                        <div class="btn-group vessel-btn" dropdown>
+                            <button type="button" class="btn btn-xs btn-default" style="font-size: 10px; width: 60px" btn-checkbox ng-model="selVessel.showTrack">
+                                <span class="glyphicon glyphicon-time"></span>&nbsp;Tracks
+                            </button>
+                            <button type="button" class="btn btn-xs btn-default dropdown-toggle" style="font-size: 10px; width: 30px" dropdown-toggle>
+                                <span class="caret"></span>
+                                <span class="sr-only">Split button!</span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu" style="font-size: 10px; min-width: 100px;">
+                                <li><a href ng-click="showTrack('PT1H')">last hour</a></li>
+                                <li><a href ng-click="showTrack('P1D')">last day</a></li>
+                                <li><a href ng-click="showTrack('P7D')">last week</a></li>
+                            </ul>
+                        </div>
                     </div>
-                    <div class="col-lg-6" style="margin-top: 5px;">
+                    <div class="col-xs-6 col-lg-6 vessel-btn-col" style="margin-top: 5px;">
                         <button type="button" class="btn btn-xs btn-default vessel-btn" ng-click="marineTraffic(selVessel.mmsi)">
                             <span class="fa fa-external-link"></span>&nbsp;MarineTraffic
                         </button>

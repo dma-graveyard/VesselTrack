@@ -125,6 +125,38 @@ angular.module('vesseltrack.app')
                 })
             });
 
+            var trackLayer = new OpenLayers.Layer.Vector("Past Tracks", {
+                styleMap : new OpenLayers.StyleMap({
+                    'default' : {
+                        strokeColor : "#CC2222",
+                        strokeWidth : 2
+                    }
+                })
+            });
+
+            var trackLabelLayer = new OpenLayers.Layer.Vector("Past Track Labels", {
+                styleMap : new OpenLayers.StyleMap({
+                    'default' : {
+                        label : "${timeStamp}",
+                        fontColor : "black",
+                        fontSize : "11px",
+                        fontWeight : "bold",
+                        labelAlign : "${align}",
+                        labelXOffset : "${xOffset}",
+                        labelYOffset : "${yOffset}",
+                        labelOutlineColor : "#fff",
+                        labelOutlineWidth : 2,
+                        labelOutline : 1,
+                        pointRadius : 2,
+                        fill : true,
+                        fillColor : "#CC2222",
+                        strokeColor : "#CC2222",
+                        stroke : true
+                    }
+                })
+            });
+
+
             /*********************************/
             /* Map                           */
             /*********************************/
@@ -132,7 +164,7 @@ angular.module('vesseltrack.app')
             $scope.map = new OpenLayers.Map({
                 div: 'map',
                 theme: null,
-                layers: [ osmLayer, vesselLayer, selectionLayer ],
+                layers: [ osmLayer, vesselLayer, selectionLayer, trackLayer, trackLabelLayer ],
                 units: "degrees",
                 projection: projmerc,
                 center: new OpenLayers.LonLat($scope.mapSettings.lon, $scope.mapSettings.lat).transform(proj4326, projmerc),
@@ -471,5 +503,95 @@ angular.module('vesseltrack.app')
                     selectionLayer.redraw();
                 }
             };
+
+            /*********************************/
+            /* Past track Loading            */
+            /*********************************/
+
+            /**
+             * Fetches the past track for the currently selected vessel
+             */
+            $scope.fetchPastTrack = function() {
+                if ($scope.selVessel) {
+                    VesselTrackService.fetchTrack(
+                        $scope.selVessel.mmsi,
+                        $scope.selVessel.trackDuration,
+                        function (track) {
+                            $scope.generatePastTrackFeature(track);
+                        },
+                        function () {
+                            console.error("Error fetching past track");
+                        }
+                    )
+                }
+            };
+
+            /** Generates the feature for the track **/
+            $scope.generatePastTrackFeature = function (tracks) {
+                trackLayer.removeAllFeatures();
+                trackLabelLayer.removeAllFeatures();
+
+                if (!tracks || !$scope.selVessel || !$scope.selVessel.showTrack) {
+                    return;
+                }
+
+                // Draw tracks layer
+                for ( var i = 1; i < tracks.length; i++) {
+                    // Insert line
+                    var points = [createPoint(tracks[i - 1].lon, tracks[i - 1].lat), createPoint(tracks[i].lon, tracks[i].lat)];
+                    var line = new OpenLayers.Geometry.LineString(points);
+                    var lineFeature = new OpenLayers.Feature.Vector(line, {
+                        id : $scope.selVessel.mmsi
+                    });
+                    trackLayer.addFeatures([ lineFeature ]);
+                }
+
+                // Draw timestamps layer
+                var maxNoTimestampsToDraw = 5;
+                var delta = (maxNoTimestampsToDraw - 1) / (tracks[tracks.length - 1].time - tracks[0].time - 1);
+                var oldHatCounter = -1;
+
+                for ( var i in tracks) {
+                    var track = tracks[i];
+                    var hatCounter = Math.floor((track.time - tracks[0].time) * delta);
+                    if (oldHatCounter != hatCounter) {
+                        oldHatCounter = hatCounter;
+                        var timeStampFeature = new OpenLayers.Feature.Vector(createPoint(track.lon, track.lat));
+                        timeStampFeature.attributes = {
+                            id : $scope.selVessel.mmsi,
+                            timeStamp : moment(track.time).format('MMMM Do, HH:mm'),
+                            align : "lm",
+                            xOffset : 10
+                        };
+
+                        trackLabelLayer.addFeatures([ timeStampFeature ]);
+                    }
+                }
+            };
+
+            /** Display past tracks for the given duration **/
+            $scope.showTrack = function(duration) {
+                if ($scope.selVessel) {
+                    // First clear any old track
+                    $scope.selVessel.showTrack = false;
+                    $timeout(function () {
+                        // Show the new track
+                        $scope.selVessel.trackDuration = duration;
+                        $scope.selVessel.showTrack = true;
+                    }, 100);
+                }
+            };
+
+            /** If "showTrack" is turned on, load the past track **/
+            $scope.$watch(
+                function() { return $scope.selVessel != null && $scope.selVessel.showTrack },
+                function(data) {
+                    if ($scope.selVessel && $scope.selVessel.showTrack) {
+                        $scope.fetchPastTrack();
+                    } else {
+                        $scope.generatePastTrackFeature(null);
+                    }
+                },
+                true);
 
         }]);

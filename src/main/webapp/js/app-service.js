@@ -54,6 +54,15 @@ angular.module('vesseltrack.app')
                     .error(error);
             },
 
+            /**
+             * Fetches past track positions for the given vessel
+             */
+            fetchTrack: function(mmsi, duration, success, error) {
+                $http.get('/vessels/track/' + mmsi + (duration ? '?age=' + duration : ''))
+                    .success(success)
+                    .error(error);
+            },
+
             /** Create feature attributes for the vessel graphics **/
             vesselGraphics: function(type, status, vesselScale) {
                 var col;

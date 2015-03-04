@@ -5,6 +5,7 @@ import dk.dma.vessel.track.VesselTrackHandler;
 import dk.dma.vessel.track.model.MaxSpeed;
 import dk.dma.vessel.track.model.PastTrackPos;
 import dk.dma.vessel.track.model.VesselTarget;
+import dk.dma.vessel.track.rest.PastTrackPosVo;
 import dk.dma.vessel.track.store.AisStoreClient;
 import dk.dma.vessel.track.store.DefaultMaxSpeedValues;
 import org.apache.commons.lang.StringUtils;

@@ -33,6 +33,9 @@ public class TargetStore {
 
     static final Logger LOG = LoggerFactory.getLogger(TargetStore.class);
 
+    public static final String PRIME_TARGETS_DB_SQL =
+            "select v.mmsi from " + VesselTarget.class.getSimpleName() + " v";
+
     public static final String LOAD_TARGETS_SQL =
             "SELECT t FROM " + VesselTarget.class.getSimpleName() + " t " +
                     " left join fetch t.lastPastTrackPos p " +
@@ -71,6 +74,9 @@ public class TargetStore {
     boolean stopped;
     boolean started;
 
+    /**
+     * Called when the store is initialized
+     */
     @PostConstruct
     public void init() throws IOException, ClassNotFoundException {
 
@@ -82,6 +88,9 @@ public class TargetStore {
         started = true;
     }
 
+    /**
+     * Called when the store is destroyed
+     */
     @PreDestroy
     public void destroy() {
         try {
@@ -92,21 +101,26 @@ public class TargetStore {
         }
     }
 
+    /**
+     * Load and cache the vessel targets from the database
+     */
     @Transactional
     private void loadFromDB() {
         long t0 = System.currentTimeMillis();
         long expiry = t0 - Duration.parse(targetExpire).toMillis();
 
-        // TODO: For some obscure reason, it takes forever to load the vessel targets
-        // unless we "prime" the database using something like:
-        LOG.debug("Priming DB with " + em.createQuery("select v.mmsi from VesselTarget v").getResultList().stream().count() + " vessels");
+        // Prime the vessel target table. It increases the speed of the subsequent SQL dramatically
+        LOG.debug("Priming DB with " + em.createQuery(PRIME_TARGETS_DB_SQL)
+                .getResultList().stream().count() + " vessels");
 
+        // Load and cache all active vessel targets
         em.createQuery(LOAD_TARGETS_SQL, VesselTarget.class)
                 .setParameter("lastReport", new Date(expiry))
                 .getResultList()
                 .forEach(t -> cache.put(t.getMmsi(), t));
         em.clear();
 
+        // Past track stats
         long pastTrackCnt = cache.values().stream()
                 .filter(t -> t.getLastPastTrackPos() != null)
                 .count();
@@ -115,6 +129,9 @@ public class TargetStore {
                 " has past-tracks) from DB in " + (System.currentTimeMillis() - t0) + " ms");
     }
 
+    /**
+     * Periodically expire vessel targets from the cache
+     */
     @Scheduled(cron="10 0 */1 * * *")
     public void periodicallyExpireTargets() {
         long t0 = System.currentTimeMillis();
@@ -123,6 +140,9 @@ public class TargetStore {
         LOG.info("Clean up expired targets in " + (System.currentTimeMillis() - t0) + " ms");
     }
 
+    /**
+     * Periodically delete expired past tracks from the database
+     */
     @Scheduled(cron="50 17 9 */1 * *")
     @Transactional
     public void periodicallyExpirePastTracks() {
@@ -138,8 +158,12 @@ public class TargetStore {
         }
     }
 
+    /**
+     * Periodically save changed vessel targets and past tracks to the database
+     */
     @Scheduled(cron="20 */1 * * * *")
     @Transactional
+    @SuppressWarnings("all")
     public void periodicallySaveToDB() {
         try {
             long t0 = System.currentTimeMillis();
@@ -191,10 +215,20 @@ public class TargetStore {
         }
     }
 
+    /**
+     * Returns if the store is started and the cache is loaded
+     * @return if the store is started and the cache is loaded
+     */
     public boolean isStarted() {
         return started;
     }
 
+    /**
+     * Merges the new AIS packet into the vessel target cache
+     * @param packet the AIS packet
+     * @param message the AIS message
+     * @return the merged vessel target
+     */
     public VesselTarget merge(AisPacket packet, AisMessage message) {
         if (started && !stopped) {
             VesselTarget target = cache.computeIfAbsent(message.getUserId(), VesselTarget::new);
@@ -204,51 +238,71 @@ public class TargetStore {
         return null;
     }
 
+    /**
+     * Returns the vessel target with the given MMSI
+     * @param mmsi the MMSI
+     * @return the vessel target with the given MMSI or null if not found
+     */
     public VesselTarget get(int mmsi) {
         return stopped ? null : cache.get(mmsi);
     }
 
-    public void put(VesselTarget target) {
-        if (!stopped) {
-            cache.put(target.getMmsi(), target);
-        }
-    }
-
+    /**
+     * Returns the list of vessel targets currently cached
+     * @return the list of vessel targets currently cached
+     */
     public Collection<VesselTarget> list() {
         return stopped ? new ArrayList<>() : cache.values();
     }
 
+    /**
+     * Returns the number of vessel targets currently cached
+     * @return the number of vessel targets currently cached
+     */
     public long size() {
         return stopped ? 0 : cache.size();
     }
 
+    /**
+     * Returns the past tracks for the vessel target with the given MMSI
+     * @param mmsi the MMSI
+     * @param minDist the minimum distance in meters between positions
+     * @param age the minimum duration of the past track positions
+     * @return the past track
+     */
     public List<PastTrackPos> getPastTracks(int mmsi, Integer minDist, Duration age) {
         List<PastTrackPos> result = new ArrayList<>();
 
+        // Check that the target is active
         VesselTarget target = get(mmsi);
         if (target == null) {
             return result;
         }
 
+        // Check if minimum distance is defined
         if (minDist == null) {
             minDist = Integer.valueOf(pastTrackMinDist);
         }
 
+        // Check if duration is defined
         if (age == null) {
             age = Duration.parse(pastTrackTtl);
         }
         ZonedDateTime date = ZonedDateTime.now().minus(age);
 
+        // Fetch data from the database
         result.addAll(em.createQuery(LOAD_PAST_TRACKS_SQL, PastTrackPos.class)
                 .setParameter("time", Date.from(date.toInstant()))
                 .setParameter("mmsi", new Integer(mmsi))
                 .getResultList());
 
+        // Add the current position of the vessel target
         PastTrackPos currentPos = new PastTrackPos(target);
         if (result.size() > 0 && !result.get(0).equals(currentPos)) {
             result.add(0, currentPos);
         }
 
+        // Downsample the past track position list
         return PastTrack.downSample(result, minDist, age.toMillis());
     }
 

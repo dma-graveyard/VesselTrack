@@ -2,9 +2,9 @@ package dk.dma.vessel.track.rest;
 
 import dk.dma.ais.message.NavigationalStatus;
 import dk.dma.ais.message.ShipTypeCargo;
-import dk.dma.vessel.track.VesselTrackHandler;
 import dk.dma.vessel.track.model.PastTrackPos;
 import dk.dma.vessel.track.model.VesselTarget;
+import dk.dma.vessel.track.store.TargetStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@ public class VesselRestService  {
     static final Logger LOG = LoggerFactory.getLogger(VesselRestService.class);
 
     @Autowired
-    VesselTrackHandler handler;
+    TargetStore targetStore;
 
     /**
      * Returns the vessel target with the given MMSI
@@ -51,7 +51,7 @@ public class VesselRestService  {
             produces = "application/json;charset=UTF-8")
     @ResponseBody
     public VesselTargetVo getTarget(@PathVariable("mmsi") Integer mmsi, HttpServletResponse response) {
-        VesselTarget target = handler.getVessel(mmsi);
+        VesselTarget target = targetStore.get(mmsi);
         if (target == null) {
             response.setStatus( HttpServletResponse.SC_BAD_REQUEST);
             return null;
@@ -84,7 +84,7 @@ public class VesselRestService  {
         long t0 = System.currentTimeMillis();
         Map<String, Object[]> result = new HashMap<>();
 
-        handler.getVesselStore().list().stream()
+        targetStore.list().stream()
                 .filter(withinOpenLayersBoundsOrMmsi(top, left, bottom, right, mmsi))
                 .forEach(v -> {
                     Object[] data = new Object[7];
@@ -128,7 +128,7 @@ public class VesselRestService  {
         if (ageStr != null) {
             age = Duration.parse(ageStr);
         }
-        List<PastTrackPos> track = handler.getPastTracks(mmsi, minDist, age);
+        List<PastTrackPos> track = targetStore.getPastTracks(mmsi, minDist, age);
         if (track == null) {
             response.setStatus( HttpServletResponse.SC_BAD_REQUEST);
             return null;

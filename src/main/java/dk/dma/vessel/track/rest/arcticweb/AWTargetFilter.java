@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dk.dma.vessel.track;
+package dk.dma.vessel.track.rest.arcticweb;
 
 import dk.dma.ais.packet.AisPacketTags;
 import dk.dma.enav.model.geometry.Area;
@@ -26,14 +26,21 @@ import org.apache.commons.lang.StringUtils;
 import java.util.List;
 import java.util.Set;
 
-public class TargetFilter {
+/**
+ * Supports target filtering
+ *
+ * This implementation provides backwards compatibility with the AisTrack API
+ * and is used by ActicWeb for now
+ */
+@SuppressWarnings("unused")
+public class AWTargetFilter {
 
     Long ttlLive;
     Long ttlSat;
     Set<String> mmsis;
     List<Area> geos;
 
-    public TargetFilter() {
+    public AWTargetFilter() {
 
     }
 

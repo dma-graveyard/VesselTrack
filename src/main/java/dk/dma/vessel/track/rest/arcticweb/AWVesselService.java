@@ -1,13 +1,12 @@
 package dk.dma.vessel.track.rest.arcticweb;
 
-import dk.dma.vessel.track.TargetFilter;
-import dk.dma.vessel.track.VesselTrackHandler;
 import dk.dma.vessel.track.model.MaxSpeed;
 import dk.dma.vessel.track.model.PastTrackPos;
 import dk.dma.vessel.track.model.VesselTarget;
 import dk.dma.vessel.track.rest.PastTrackPosVo;
 import dk.dma.vessel.track.store.AisStoreClient;
 import dk.dma.vessel.track.store.DefaultMaxSpeedValues;
+import dk.dma.vessel.track.store.TargetStore;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +25,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * REST API for accessing vessel information
+ * REST API for accessing vessel information.
+ *
+ * This implementation provides backwards compatibility with the AisTrack API
+ * and is used by ActicWeb for now
  */
 @Controller
 @RequestMapping("/target/vessel")
@@ -36,7 +38,7 @@ public class AWVesselService {
     static final Logger LOG = LoggerFactory.getLogger(AWVesselService.class);
 
     @Autowired
-    VesselTrackHandler handler;
+    TargetStore targetStore;
 
     @Autowired
     AisStoreClient aisStoreClient;
@@ -53,7 +55,7 @@ public class AWVesselService {
             produces = "application/json;charset=UTF-8")
     @ResponseBody
     public AWVesselTargetVo getTarget(@PathVariable("mmsi") Integer mmsi, HttpServletResponse response) {
-        VesselTarget target = handler.getVessel(mmsi);
+        VesselTarget target = targetStore.get(mmsi);
         if (target == null) {
             response.setStatus( HttpServletResponse.SC_BAD_REQUEST);
             return null;
@@ -81,7 +83,7 @@ public class AWVesselService {
             @RequestParam(value="geo", required = false) String[] geo
     ) {
         long t0 = System.currentTimeMillis();
-        TargetFilter filter = new TargetFilter();
+        AWTargetFilter filter = new AWTargetFilter();
 
         if (StringUtils.isNotBlank(ttlLive)) {
             filter.setTtlLive(Duration.parse(ttlLive).getSeconds());
@@ -93,10 +95,13 @@ public class AWVesselService {
             filter.setMmsis(Arrays.asList(mmsi).stream().collect(Collectors.toSet()));
         }
         if (geo != null && geo.length > 0) {
-            filter.setGeos(Arrays.asList(geo).stream().map(TargetFilter::getGeometry).collect(Collectors.toList()));
+            filter.setGeos(Arrays.asList(geo).stream().map(AWTargetFilter::getGeometry).collect(Collectors.toList()));
         }
 
-        List<VesselTarget> result =  handler.getVesselList(filter);
+        List<VesselTarget> result =  targetStore.list().stream()
+                .filter(filter::test)
+                .collect(Collectors.toList());
+
         LOG.info(String.format("/list returned %d targets in %d ms", result.size(), System.currentTimeMillis() - t0));
         return result.stream()
                 .map(AWVesselTargetVo::new)
@@ -113,7 +118,7 @@ public class AWVesselService {
             produces = "application/json;charset=UTF-8")
     @ResponseBody
     public String executeQuery() {
-        return String.format("{\"count\" : %d}", handler.getVesselStore().size());
+        return String.format("{\"count\" : %d}", targetStore.size());
     }
 
     /**
@@ -140,7 +145,7 @@ public class AWVesselService {
         if (ageStr != null) {
             age = Duration.parse(ageStr);
         }
-        List<PastTrackPos> track = handler.getPastTracks(mmsi, minDist, age);
+        List<PastTrackPos> track = targetStore.getPastTracks(mmsi, minDist, age);
         if (track == null) {
             response.setStatus( HttpServletResponse.SC_BAD_REQUEST);
             return null;
@@ -199,7 +204,7 @@ public class AWVesselService {
             @PathVariable("mmsi") Integer mmsi,
             HttpServletResponse response
     ) {
-        VesselTarget target = handler.getVessel(mmsi);
+        VesselTarget target = targetStore.get(mmsi);
         if (target == null) {
             response.setStatus( HttpServletResponse.SC_BAD_REQUEST);
             return null;
@@ -221,7 +226,7 @@ public class AWVesselService {
     public List<MaxSpeed> maxSpeedList(
             HttpServletResponse response
     ) {
-        return handler.getVesselStore().list().stream()
+        return targetStore.list().stream()
                 .map(this::getMaxSpeed)
                         .collect(Collectors.toList());
     }

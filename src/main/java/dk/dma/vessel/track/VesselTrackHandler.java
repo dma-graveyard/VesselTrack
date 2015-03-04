@@ -17,19 +17,17 @@ package dk.dma.vessel.track;
 import dk.dma.ais.message.AisMessage;
 import dk.dma.ais.message.AisTargetType;
 import dk.dma.ais.packet.AisPacket;
-import dk.dma.vessel.track.model.PastTrackPos;
-import dk.dma.vessel.track.model.VesselTarget;
 import dk.dma.vessel.track.store.TargetStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
+/**
+ * Receives AIS packets from the AIS bus and passes the packets to the underlying store
+ */
 @Service
 public class VesselTrackHandler implements Consumer<AisPacket> {
 
@@ -75,6 +73,10 @@ public class VesselTrackHandler implements Consumer<AisPacket> {
         }
     }
 
+    /**
+     * Merge the AIS packet into the target store
+     * @param packet the AIS packet
+     */
     private void handleVessel(final AisPacket packet) {
         final AisMessage message = packet.tryGetAisMessage();
 
@@ -84,22 +86,5 @@ public class VesselTrackHandler implements Consumer<AisPacket> {
         }
 
         vesselStore.merge(packet, message);
-    }
-
-    public VesselTarget getVessel(int mmsi) {
-        return vesselStore.get(mmsi);
-    }
-
-    public TargetStore getVesselStore() {
-        return vesselStore;
-    }
-
-    public List<VesselTarget> getVesselList(TargetFilter targetFilter) {
-        return vesselStore.list().stream()
-                .filter(targetFilter::test)
-                .collect(Collectors.toList());
-    }
-    public List<PastTrackPos> getPastTracks(int mmsi, Integer minDist, Duration age) {
-        return vesselStore.getPastTracks(mmsi, minDist, age);
     }
 }

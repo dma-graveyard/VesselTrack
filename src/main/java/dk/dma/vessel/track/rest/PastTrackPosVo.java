@@ -18,9 +18,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import dk.dma.vessel.track.model.PastTrackPos;
 
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
-import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
 

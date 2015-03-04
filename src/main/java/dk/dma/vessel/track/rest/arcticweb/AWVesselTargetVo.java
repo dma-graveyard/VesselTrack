@@ -26,6 +26,9 @@ import java.util.Date;
 
 /**
  * Vessel class A and B target
+ *
+ * This implementation provides backwards compatibility with the AisTrack API
+ * and is used by ActicWeb for now
  */
 @SuppressWarnings("unused")
 @JsonIgnoreProperties(ignoreUnknown=true)

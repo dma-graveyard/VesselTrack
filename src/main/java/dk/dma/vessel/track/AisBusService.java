@@ -1,9 +1,8 @@
-package dk.dma.vessel.track.model;
+package dk.dma.vessel.track;
 
 import dk.dma.ais.bus.AisBus;
 import dk.dma.ais.bus.consumer.DistributerConsumer;
 import dk.dma.ais.configuration.bus.AisBusConfiguration;
-import dk.dma.vessel.track.VesselTrackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +18,7 @@ import java.io.FileNotFoundException;
  * Encapsulates the AIS bus service
  */
 @Service
+@SuppressWarnings("unused")
 public class AisBusService {
 
     static final Logger LOG = LoggerFactory.getLogger(AisBusService.class);

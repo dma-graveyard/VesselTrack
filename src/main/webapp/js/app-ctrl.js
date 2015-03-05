@@ -316,10 +316,12 @@ angular.module('vesseltrack.app')
                     if ($scope.selVessel && $scope.selVessel.follow) {
                         $scope.selVessel.followZoom = $scope.mapSettings.zoom;
                         $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat, $scope.selVessel.followZoom);
+                        replaceClass('#follow-btn', 'btn-default', 'btn-danger');
+                    } else {
+                        replaceClass('#follow-btn', 'btn-danger', 'btn-default');
                     }
                  },
                 true);
-
 
             /*********************************/
             /* Vessel Loading                */
@@ -588,8 +590,10 @@ angular.module('vesseltrack.app')
                 function(data) {
                     if ($scope.selVessel && $scope.selVessel.showTrack) {
                         $scope.fetchPastTrack();
+                        replaceClass('#track-btn,#track-btn-dropdown', 'btn-default', 'btn-danger');
                     } else {
                         $scope.generatePastTrackFeature(null);
+                        replaceClass('#track-btn,#track-btn-dropdown', 'btn-danger', 'btn-default');
                     }
                 },
                 true);

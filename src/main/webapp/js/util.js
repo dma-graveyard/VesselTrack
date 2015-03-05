@@ -86,3 +86,15 @@ function lineDistance( point1, point2 ) {
 
     return Math.sqrt( xs + ys );
 }
+
+/**
+ * Replaces one CSS class for another
+ * @param elm the element to target
+ * @param removeClass the class to remove
+ * @param addClass the class to add
+ */
+replaceClass = function (elm, removeClass, addClass) {
+    $(elm).removeClass(removeClass);
+    $(elm).addClass(addClass);
+};
+

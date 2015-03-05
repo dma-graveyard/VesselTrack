@@ -174,6 +174,12 @@ angular.module('vesseltrack.app')
 
             // Add zoom buttons
             $scope.map.addControl(new OpenLayers.Control.Zoom());
+            var overviewMap = new OpenLayers.Control.OverviewMap({
+                div: $('#overviewMap')[0],
+                minRatio: 20,
+                autoPan: true
+            });
+            $scope.map.addControl(overviewMap);
 
             /*********************************/
             /* Interactive Map Functionality */
@@ -533,7 +539,7 @@ angular.module('vesseltrack.app')
                 trackLayer.removeAllFeatures();
                 trackLabelLayer.removeAllFeatures();
 
-                if (!tracks || !$scope.selVessel || !$scope.selVessel.showTrack) {
+                if (!tracks || tracks.length == 0 || !$scope.selVessel || !$scope.selVessel.showTrack) {
                     return;
                 }
 

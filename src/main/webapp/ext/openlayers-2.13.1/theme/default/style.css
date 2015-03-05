@@ -106,7 +106,7 @@ div.olControlMousePosition {
 
 .olControlOverviewMapExtentRectangle {
     overflow: hidden;
-    background-image: url("theme/default/img/blank.gif");
+    background-image: url("img/blank.gif");
     cursor: move;
     border: 2px dotted red;
 }

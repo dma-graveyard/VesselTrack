@@ -33,6 +33,16 @@ body {
     display: none;
 }
 
+.olControlOverviewMap {
+    background:#ff0000;
+}
+
+.olControlOverviewMapElement {
+    background:#b5d0d0 !important;
+    display: block;
+    padding: 0;
+}
+
 /* Small screen definition */
 .logo {
     width: 120px;
@@ -78,7 +88,7 @@ body {
         position: fixed;
         top: 10px;
         right: 10px;
-        width: 240px;
+        width: 260px;
     }
 }
 
@@ -107,7 +117,12 @@ body {
 .info-panel-selector-txt {
     display: inherit;
     font-size: 9px;
-    padding-bottom: 3px;
+    vertical-align: 2px;
+}
+
+.overview-map {
+    width: 100%;
+    padding: 10px 0 5px 0;
 }
 
 .legends {
@@ -133,7 +148,7 @@ body {
 }
 
 .details-table {
-    margin: 5px 5px 5px 10px;
+    margin: 10px 5px 5px 10px;
 }
 
 .details-title {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1,maximum-scale=1, user-scalable=no">
     <meta name="ROBOTS" content="NONE">
     <meta name="GOOGLEBOT" content="NOARCHIVE">
 
@@ -14,7 +14,7 @@
     <!-- CSS-->
     <link href="/ext/bootstrap-3.3.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="/ext/bootstrap-3.3.1/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/ext/openlayers-2.13.1/style.css" rel="stylesheet">
+    <link href="/ext/openlayers-2.13.1/theme/default/style.css" rel="stylesheet">
     <link href="/ext/font-awesome-4.3.0/css/font-awesome.min.css" rel="stylesheet">
 
     <link href="css/app.css" rel="stylesheet">
@@ -28,19 +28,27 @@
         <div style="text-align: center"><img class="logo" src="/img/logo.png"></div>
         <div class="info-panel-selector">
             <div>
-                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('legends')" ng-class="{true:'active'}[activeInfoPanel == 'legends']">
-                    <span class="glyphicon glyphicon-info-sign"></span>
-                    <span class="info-panel-selector-txt">Legends</span>
-                </span>
-                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('search')" ng-class="{true:'active'}[activeInfoPanel == 'search']">
-                    <span class="glyphicon glyphicon-search"></span>
-                    <span class="info-panel-selector-txt">Search</span>
+                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('map')" ng-class="{true:'active'}[activeInfoPanel == 'map']">
+                    <span class="glyphicon glyphicon-globe"></span>
+                    <span class="info-panel-selector-txt">Map</span>
                 </span>
                 <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('details')" ng-class="{true:'active'}[activeInfoPanel == 'details']">
                     <span class="fa fa-ship"></span>
                     <span class="info-panel-selector-txt">Details</span>
                 </span>
+                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('search')" ng-class="{true:'active'}[activeInfoPanel == 'search']">
+                    <span class="glyphicon glyphicon-search"></span>
+                    <span class="info-panel-selector-txt">Search</span>
+                </span>
+                <span class="info-panel-selector-btn" ng-click="toggleInfoPanel('legends')" ng-class="{true:'active'}[activeInfoPanel == 'legends']">
+                    <span class="glyphicon glyphicon-info-sign"></span>
+                    <span class="info-panel-selector-txt">Legends</span>
+                </span>
             </div>
+        </div>
+
+        <div class="overview-map" ng-show="activeInfoPanel == 'map'">
+            <div id="overviewMap" style="width: 182px; height: 92px; border: 1px solid gray;margin: auto;"></div>
         </div>
 
         <div class="legends" ng-if="activeInfoPanel == 'legends'">

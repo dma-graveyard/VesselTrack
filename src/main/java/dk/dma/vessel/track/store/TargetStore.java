@@ -29,13 +29,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Implementation of a target store
  */
 @Service
+@SuppressWarnings("unused")
 public class TargetStore {
 
     static final Logger LOG = LoggerFactory.getLogger(TargetStore.class);
-
-    public static final String LOAD_TARGETS_SQL =
-            "SELECT t FROM " + VesselTarget.class.getSimpleName() + " t " +
-                    " where t.lastReport > :lastReport";
 
     public static final String PRIME_TARGETS_DB_SQL =
             "select v.mmsi from " + VesselTarget.class.getSimpleName() + " v";
@@ -118,36 +115,24 @@ public class TargetStore {
 
         ConcurrentHashMap<Integer, VesselTarget> newCache = new ConcurrentHashMap<>();
 
-        if (slave) {
-            // Load and cache all active vessel targets
-            em.createQuery(LOAD_TARGETS_SQL, VesselTarget.class)
-                    .setParameter("lastReport", new Date(expiry))
-                    .getResultList()
-                    .forEach(t -> newCache.put(t.getMmsi(), t));
-            em.clear();
+        // Prime the vessel target table. It increases the speed of the subsequent SQL dramatically
+        LOG.debug("Priming DB with " + em.createQuery(PRIME_TARGETS_DB_SQL)
+                .getResultList().stream().count() + " vessels");
 
-            LOG.info("Loaded " + newCache.size() + " targets from DB in " + (System.currentTimeMillis() - t0) + " ms");
+        // Load and cache all active vessel targets
+        em.createQuery(LOAD_TARGETS_INCL_PAST_TRACKS_SQL, VesselTarget.class)
+                .setParameter("lastReport", new Date(expiry))
+                .getResultList()
+                .forEach(t -> newCache.put(t.getMmsi(), t));
+        em.clear();
 
-        } else {
-            // Prime the vessel target table. It increases the speed of the subsequent SQL dramatically
-            LOG.debug("Priming DB with " + em.createQuery(PRIME_TARGETS_DB_SQL)
-                    .getResultList().stream().count() + " vessels");
+        // Past track stats
+        long pastTrackCnt = newCache.values().stream()
+                .filter(t -> t.getLastPastTrackPos() != null)
+                .count();
 
-            // Load and cache all active vessel targets
-            em.createQuery(LOAD_TARGETS_INCL_PAST_TRACKS_SQL, VesselTarget.class)
-                    .setParameter("lastReport", new Date(expiry))
-                    .getResultList()
-                    .forEach(t -> newCache.put(t.getMmsi(), t));
-            em.clear();
-
-            // Past track stats
-            long pastTrackCnt = newCache.values().stream()
-                    .filter(t -> t.getLastPastTrackPos() != null)
-                    .count();
-
-            LOG.info("**** Loaded " + newCache.size() + " targets (of which " + pastTrackCnt +
-                    " has past-tracks) from DB in " + (System.currentTimeMillis() - t0) + " ms");
-        }
+        LOG.info("**** Loaded " + newCache.size() + " targets (of which " + pastTrackCnt +
+                " has past-tracks) from DB in " + (System.currentTimeMillis() - t0) + " ms");
 
         // Update the current cache
         cache = newCache;

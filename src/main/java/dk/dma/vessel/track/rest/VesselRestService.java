@@ -38,6 +38,19 @@ public class VesselRestService  {
     TargetStore targetStore;
 
     /**
+     * Returns the number of active vessels
+     * @return the number of active vessels
+     */
+    @RequestMapping(
+            value = "/count",
+            method = RequestMethod.GET
+    )
+    @ResponseBody
+    public String count() {
+        return String.format("{\"count\" : %d}", targetStore.size());
+    }
+
+    /**
      * Returns the vessel target with the given MMSI
      * @param mmsi the MMSI
      * @param response the servlet response

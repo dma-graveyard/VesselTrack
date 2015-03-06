@@ -3,6 +3,8 @@ package dk.dma.vessel.track;
 import dk.dma.ais.bus.AisBus;
 import dk.dma.ais.bus.consumer.DistributerConsumer;
 import dk.dma.ais.configuration.bus.AisBusConfiguration;
+import dk.dma.ais.configuration.filter.ExpressionFilterConfiguration;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,9 @@ public class AisBusService {
     @Value("${aisbus}")
     String aisbusPath;
 
+    @Value("${aisbusFilter:}")
+    String aisbusFilter;
+
     private AisBus aisBus;
 
     @Autowired
@@ -37,7 +42,15 @@ public class AisBusService {
 
         // Load AisBus configuration
         AisBusConfiguration aisBusConf = AisBusConfiguration.load(aisbusPath);
+
+        // Check if we need to update an expression filter
+        if (StringUtils.isNotBlank(aisbusFilter)) {
+            LOG.info("**** Setting AIS bus filter: " + aisbusFilter);
+            createExpressionFilter(aisBusConf, aisbusFilter);
+        }
+
         aisBus = aisBusConf.getInstance();
+
         // Create distributor consumer and add to aisBus
         DistributerConsumer distributer = new DistributerConsumer();
         distributer.getConsumers().add(handler);
@@ -46,6 +59,29 @@ public class AisBusService {
         aisBus.start();
         aisBus.startConsumers();
         aisBus.startProviders();
+    }
+
+    /**
+     * Updates the AIS bus with an expression filter
+     *
+     * @param aisBusConf the AIS bus configuration
+     * @param aisbusFilter the expression filter
+     * @return the updated expression filter
+     */
+    private ExpressionFilterConfiguration createExpressionFilter(AisBusConfiguration aisBusConf, String aisbusFilter) {
+        // Check if the filter is already defined
+        ExpressionFilterConfiguration expressionFilter
+                = (ExpressionFilterConfiguration)aisBusConf.getFilters().stream()
+                .filter(f -> f instanceof ExpressionFilterConfiguration)
+                .findFirst()
+                .orElse(null);
+
+        if (expressionFilter == null) {
+            expressionFilter = new ExpressionFilterConfiguration();
+            aisBusConf.getFilters().add(expressionFilter);
+        }
+        expressionFilter.setExpression(aisbusFilter);
+        return expressionFilter;
     }
 
     @PreDestroy

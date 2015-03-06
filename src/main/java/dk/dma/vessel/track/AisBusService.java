@@ -15,6 +15,8 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.xml.bind.JAXBException;
 import java.io.FileNotFoundException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 /**
  * Encapsulates the AIS bus service
@@ -25,7 +27,7 @@ public class AisBusService {
 
     static final Logger LOG = LoggerFactory.getLogger(AisBusService.class);
 
-    @Value("${aisbus}")
+    @Value("${aisbus:}")
     String aisbusPath;
 
     @Value("${aisbusFilter:}")
@@ -49,7 +51,7 @@ public class AisBusService {
             LOG.info("Starting AIS bus using config: " + aisbusPath);
 
             // Load AisBus configuration
-            AisBusConfiguration aisBusConf = AisBusConfiguration.load(aisbusPath);
+            AisBusConfiguration aisBusConf = loadAisBusConfiguraion(aisbusPath);
 
             // Check if we need to update an expression filter
             if (StringUtils.isNotBlank(aisbusFilter)) {
@@ -68,6 +70,22 @@ public class AisBusService {
             aisBus.startConsumers();
             aisBus.startProviders();
         }
+    }
+
+    /**
+     * Loads the AIS bus configuration
+     * @param aisbusPath the path to the aisbus.xml configuration file
+     * @return the AIS bus configuraiton
+     */
+    private AisBusConfiguration loadAisBusConfiguraion(String aisbusPath) throws FileNotFoundException, JAXBException {
+
+        if (StringUtils.isNotBlank(aisbusPath) && Files.exists(Paths.get(aisbusPath))) {
+            LOG.info("Loading AIS bus configuration from file " + aisbusPath);
+            return AisBusConfiguration.load(aisbusPath);
+        }
+
+        LOG.info("Loading default AIS bus configuration");
+        return AisBusConfiguration.load(getClass().getResourceAsStream("/aisbus.xml"));
     }
 
     /**

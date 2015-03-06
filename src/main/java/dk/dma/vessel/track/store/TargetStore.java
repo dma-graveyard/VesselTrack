@@ -33,12 +33,12 @@ public class TargetStore {
 
     static final Logger LOG = LoggerFactory.getLogger(TargetStore.class);
 
-    public static final String PRIME_TARGETS_DB_SQL =
-            "select v.mmsi from " + VesselTarget.class.getSimpleName() + " v";
-
     public static final String LOAD_TARGETS_SQL =
             "SELECT t FROM " + VesselTarget.class.getSimpleName() + " t " +
                     " where t.lastReport > :lastReport";
+
+    public static final String PRIME_TARGETS_DB_SQL =
+            "select v.mmsi from " + VesselTarget.class.getSimpleName() + " v";
 
     public static final String LOAD_TARGETS_INCL_PAST_TRACKS_SQL =
             "SELECT t FROM " + VesselTarget.class.getSimpleName() + " t " +
@@ -156,6 +156,7 @@ public class TargetStore {
     /**
      * Periodically expire vessel targets from the cache
      */
+    @Transactional
     @Scheduled(cron="10 0 */1 * * *")
     public void periodicallyExpireTargets() {
         long t0 = System.currentTimeMillis();

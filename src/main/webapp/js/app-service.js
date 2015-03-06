@@ -35,7 +35,7 @@ angular.module('vesseltrack.app')
              * fetches the given vessel
              */
             fetchVessel: function(mmsi, success, error) {
-                $http.get('/vessels/' + mmsi)
+                $http.get('vessels/' + mmsi)
                     .success(success)
                     .error(error);
             },
@@ -52,7 +52,7 @@ angular.module('vesseltrack.app')
                 if (params.length > 0) {
                     params = params.slice(1);
                 }
-                $http.get('/vessels/list?' + params)
+                $http.get('vessels/list?' + params)
                     .success(success)
                     .error(error);
             },
@@ -61,7 +61,7 @@ angular.module('vesseltrack.app')
              * Fetches past track positions for the given vessel
              */
             fetchTrack: function(mmsi, duration, success, error) {
-                $http.get('/vessels/track/' + mmsi + (duration ? '?age=' + duration : ''))
+                $http.get('vessels/track/' + mmsi + (duration ? '?age=' + duration : ''))
                     .success(success)
                     .error(error);
             },
@@ -70,7 +70,7 @@ angular.module('vesseltrack.app')
              * Fetches the auto-complete list for the given input
              */
             searchFilterOptions: function(facet, searchTerm, maxHits, success, error) {
-                $http.get('/vessels/search-options?key=' + encodeURIComponent(facet) +
+                $http.get('vessels/search-options?key=' + encodeURIComponent(facet) +
                             '&term=' + encodeURIComponent(searchTerm) +
                             '&maxHits=' + maxHits)
                     .success(success)

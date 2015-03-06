@@ -58,6 +58,13 @@ The base command for running dmadk/vessel-track is:
 
     sudo docker run dmadk/vessel-track
 
+### MySQL in Docker
+
+An easy way to run a mysql instance:
+
+    docker build -t mysqldb github.com/nkratzke/easymysql
+    docker run -d -p 3306:3306 -e url=https://raw.githubusercontent.com/dma-ais/VesselTrack/master/db/create-database.sql mysqldb
+
 
 ## REST API ##
 

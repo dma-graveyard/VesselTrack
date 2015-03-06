@@ -43,13 +43,16 @@ angular.module('vesseltrack.app')
             /**
              * fetches all vessels within the given bounds
              */
-            fetchVessels: function(bounds, mmsi, success, error) {
-                $http.get('/vessels/list'
-                    + '?top=' + bounds.top
-                    + '&left=' + bounds.left
-                    + '&bottom=' + bounds.bottom
-                    + '&right=' + bounds.right
-                    + (mmsi ? '&mmsi=' + mmsi : ''))
+            fetchVessels: function(bounds, mmsi, filter, maxHits, success, error) {
+                var params =
+                      (bounds  ? '&top=' + bounds.top + '&left=' + bounds.left + '&bottom=' + bounds.bottom + '&right=' + bounds.right : '')
+                    + (mmsi    ? '&mmsi=' + mmsi : '')
+                    + (filter  ? '&filter=' + encodeURIComponent(filter) : '')
+                    + (maxHits ? '&maxHits=' + maxHits : '');
+                if (params.length > 0) {
+                    params = params.slice(1);
+                }
+                $http.get('/vessels/list?' + params)
                     .success(success)
                     .error(error);
             },
@@ -59,6 +62,17 @@ angular.module('vesseltrack.app')
              */
             fetchTrack: function(mmsi, duration, success, error) {
                 $http.get('/vessels/track/' + mmsi + (duration ? '?age=' + duration : ''))
+                    .success(success)
+                    .error(error);
+            },
+
+            /**
+             * Fetches the auto-complete list for the given input
+             */
+            searchFilterOptions: function(facet, searchTerm, maxHits, success, error) {
+                $http.get('/vessels/search-options?key=' + encodeURIComponent(facet) +
+                            '&term=' + encodeURIComponent(searchTerm) +
+                            '&maxHits=' + maxHits)
                     .success(success)
                     .error(error);
             },

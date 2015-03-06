@@ -177,3 +177,70 @@ body {
     font-size: 10px;
     width: 90px;
 }
+
+.search-panel {
+    margin: 10px 5px;
+}
+
+.search-filter {
+}
+
+/** Struggle to make visualsearch look good **/
+.VS-icon-search {
+    visibility: hidden!important;
+}
+
+.VS-search-inner {
+    margin: 0 10px!important;
+}
+
+.VS-search-box {
+    border-radius: 10px!important;
+}
+
+.ui-menu-item {
+    width: 150px!important;
+}
+
+.ui-menu-item a {
+    font-size: 10px;
+}
+
+.search-filter input {
+    -webkit-box-sizing: content-box!important;
+    -moz-box-sizing: content-box!important;
+    box-sizing: content-box!important;
+}
+
+.search-result {
+    margin-top: 10px;
+    min-height: 200px;
+    max-height: 400px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+.search-result-vessel {
+    border-top: 1px solid #dddddd;
+    padding: 5px;
+    font-size: 10px;
+    position: relative;
+}
+
+.search-result-vessel-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}
+
+.search-result-desc {
+    font-size: 10px;
+    line-height: 18px;
+    vertical-align: middle;
+    margin: 5px 0 0 5px;
+}
+
+.search-filter-btn {
+    font-size: 10px;
+}
+

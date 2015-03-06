@@ -16,82 +16,57 @@ package dk.dma.vessel.track.rest;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import dk.dma.ais.message.AisTargetType;
 import dk.dma.ais.message.NavigationalStatus;
 import dk.dma.vessel.track.model.VesselTarget;
 
 import java.io.Serializable;
-import java.util.Date;
 
 import static dk.dma.vessel.track.rest.VesselRestService.getShipType;
 
 /**
- * Vessel class A and B target
+ * Vessel target value object used for compact vessel lists
  */
 @SuppressWarnings("unused")
 @JsonIgnoreProperties(ignoreUnknown=true)
 @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
-public class VesselTargetVo implements Serializable {
+public class VesselTargetListVo implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    AisTargetType targetType;
     int mmsi;
-    String country;
     Long lastReport;
     Float lat;
     Float lon;
     Float cog;
     Float sog;
-    Short heading;
-    Short rot;
-    Short length;
-    Short width;
     String name;
     String callsign;
-    Long imoNo;
-    String destination;
-    Float draught;
-    Integer navStatus;
-    Boolean moored;
-    Long eta;
+    int navStatus;
     int vesselType;
 
-    public VesselTargetVo() {
+    public VesselTargetListVo() {
     }
 
     /**
      * Copy the fields of the given vessel target
      * @param t the vessel target
      */
-    public VesselTargetVo(VesselTarget t) {
+    public VesselTargetListVo(VesselTarget t) {
         mmsi = t.getMmsi();
-        targetType = t.getTargetType();
-        country = t.getCountry();
         lastReport = t.getLastReport() != null ? t.getLastReport().getTime() : null;
 
         // Position data
         sog = t.getSog();
         cog = t.getCog();
-        heading = t.getHeading();
         lat = t.getLat();
         lon = t.getLon();
-        rot = t.getRot();
         navStatus =  t.getNavStatus() != null ? t.getNavStatus().getCode() : NavigationalStatus.UNDEFINED.getCode();
-        moored = (t.getNavStatus() == NavigationalStatus.AT_ANCHOR || t.getNavStatus() == NavigationalStatus.MOORED);
 
         // Static data
         name = t.getName();
         callsign = t.getCallsign();
         vesselType = getShipType(t).ordinal();
-        length = t.getLength();
-        width = t.getWidth();
-        destination = t.getDestination();
-        draught = t.getDraught();
-        eta = t.getEta() != null ? t.getEta().getTime() : null;
-        imoNo = t.getImoNo();
     }
-
 
     @Override
     public int hashCode() {
@@ -101,28 +76,12 @@ public class VesselTargetVo implements Serializable {
     // ****** Getters and setters ******* //
 
 
-    public AisTargetType getTargetType() {
-        return targetType;
-    }
-
-    public void setTargetType(AisTargetType targetType) {
-        this.targetType = targetType;
-    }
-
     public int getMmsi() {
         return mmsi;
     }
 
     public void setMmsi(int mmsi) {
         this.mmsi = mmsi;
-    }
-
-    public String getCountry() {
-        return country;
-    }
-
-    public void setCountry(String country) {
-        this.country = country;
     }
 
     public Long getLastReport() {
@@ -149,14 +108,6 @@ public class VesselTargetVo implements Serializable {
         this.lon = lon;
     }
 
-    public Float getCog() {
-        return cog;
-    }
-
-    public void setCog(Float cog) {
-        this.cog = cog;
-    }
-
     public Float getSog() {
         return sog;
     }
@@ -165,36 +116,12 @@ public class VesselTargetVo implements Serializable {
         this.sog = sog;
     }
 
-    public Short getHeading() {
-        return heading;
+    public Float getCog() {
+        return cog;
     }
 
-    public void setHeading(Short heading) {
-        this.heading = heading;
-    }
-
-    public Short getRot() {
-        return rot;
-    }
-
-    public void setRot(Short rot) {
-        this.rot = rot;
-    }
-
-    public Short getLength() {
-        return length;
-    }
-
-    public void setLength(Short length) {
-        this.length = length;
-    }
-
-    public Short getWidth() {
-        return width;
-    }
-
-    public void setWidth(Short width) {
-        this.width = width;
+    public void setCog(Float cog) {
+        this.cog = cog;
     }
 
     public String getName() {
@@ -213,52 +140,12 @@ public class VesselTargetVo implements Serializable {
         this.callsign = callsign;
     }
 
-    public Long getImoNo() {
-        return imoNo;
-    }
-
-    public void setImoNo(Long imoNo) {
-        this.imoNo = imoNo;
-    }
-
-    public String getDestination() {
-        return destination;
-    }
-
-    public void setDestination(String destination) {
-        this.destination = destination;
-    }
-
-    public Float getDraught() {
-        return draught;
-    }
-
-    public void setDraught(Float draught) {
-        this.draught = draught;
-    }
-
-    public Integer getNavStatus() {
+    public int getNavStatus() {
         return navStatus;
     }
 
-    public void setNavStatus(Integer navStatus) {
+    public void setNavStatus(int navStatus) {
         this.navStatus = navStatus;
-    }
-
-    public Boolean getMoored() {
-        return moored;
-    }
-
-    public void setMoored(Boolean moored) {
-        this.moored = moored;
-    }
-
-    public Long getEta() {
-        return eta;
-    }
-
-    public void setEta(Long eta) {
-        this.eta = eta;
     }
 
     public int getVesselType() {

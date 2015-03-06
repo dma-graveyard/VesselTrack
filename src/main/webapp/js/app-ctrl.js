@@ -21,7 +21,7 @@ angular.module('vesseltrack.app')
             $scope.detaultSelectZoom = 10;
 
             /**
-             * Schedules the loading of vessel for the given bounds
+             * Schedules the loading of vessels for the given bounds
              * @param bounds the bounds to load the vessels for
              */
             $scope.reloadVessels = function (bounds) {
@@ -31,6 +31,15 @@ angular.module('vesseltrack.app')
                 $scope.bounds = bounds;
                 $scope.storeMapSettings();
 
+                // Schedule a reload of vessels
+                $scope.scheduleReloadVessels();
+            };
+
+            /**
+             * Schedules the loading of vessels
+             */
+            $scope.scheduleReloadVessels = function () {
+
                 // If a back-end loading has already been scheduled, cancel it
                 if ($scope.vesselTimer) {
                     $timeout.cancel($scope.vesselTimer);
@@ -39,7 +48,7 @@ angular.module('vesseltrack.app')
 
                 // Schedule the loading of vessels in 500 ms time
                 $scope.vesselTimer = $timeout(function () {
-                    $scope.fetchVessels(bounds, false);
+                    $scope.fetchVessels($scope.bounds, false);
                     if ($scope.vesselTimer) {
                         delete $scope.vesselTimer;
                     }
@@ -193,7 +202,7 @@ angular.module('vesseltrack.app')
             function formatTooltip(feature) {
                 var tooltip =
                     '<div class="vessel-tooltip">' +
-                    '<div><strong>' + feature.data.vessel[6] + '</strong></div>' +
+                    '<div><strong>' + feature.data.vessel.name + '</strong></div>' +
                     '<div><small>MMSI: ' + feature.data.mmsi + '</small></div>' +
                     '</div>';
                 return tooltip;
@@ -310,7 +319,6 @@ angular.module('vesseltrack.app')
                     var pixelDist = lineDistance(center, pos);
                     if (pixelDist > 10) {
                         $scope.setCenter($scope.selVessel.lon, $scope.selVessel.lat, $scope.selVessel.followZoom);
-                        console.log("Re-center map");
                     }
                 }
             }, 60000 + (Math.random() * 10.0 - 5.0));
@@ -353,6 +361,8 @@ angular.module('vesseltrack.app')
                 VesselTrackService.fetchVessels(
                     bounds,
                     $scope.selVessel ? $scope.selVessel.mmsi : undefined,
+                    $scope.search.filterVessels ? $scope.search.filter : undefined,
+                    undefined,
                     function (vessels) {
                         if (update) {
                             $scope.updateVesselFeatures(vessels);
@@ -368,16 +378,15 @@ angular.module('vesseltrack.app')
 
             /**
              * Creates a vessel feature from a vessel array
-             * @param mmsi the mmsi of the vessel
              * @param vessel the vessel data
              * @returns the vessel feature
              */
-            $scope.generateVesselFeature = function(mmsi, vessel) {
-                var attr = VesselTrackService.vesselGraphics(vessel[3], vessel[4], $scope.vesselScale);
-                attr.mmsi = mmsi;
-                attr.angle = (vessel[2]) ? vessel[2] - 90 : 0;
+            $scope.generateVesselFeature = function(vessel) {
+                var attr = VesselTrackService.vesselGraphics(vessel.vesselType, vessel.navStatus, $scope.vesselScale);
+                attr.mmsi = vessel.mmsi;
+                attr.angle = (vessel.cog) ? vessel.cog - 90 : 0;
                 attr.vessel = vessel;
-                var geom = createPoint(vessel[1], vessel[0]);
+                var geom = createPoint(vessel.lon, vessel.lat);
                 return new OpenLayers.Feature.Vector(geom, attr);
             };
 
@@ -389,11 +398,11 @@ angular.module('vesseltrack.app')
                 var features = [];
                 var selVesselPosUpdated = false;
 
-                $.each(vessels, function (mmsi, vessel) {
+                $.each(vessels, function (index, vessel) {
                     // Check that the vessel has a valid position
-                    if (features.length < 10000 && vessel[0] && vessel[1]) {
-                        features.push($scope.generateVesselFeature(mmsi, vessel));
-                        selVesselPosUpdated |= $scope.checkUpdateSelectedVessel(mmsi, vessel);
+                    if (features.length < 10000 && vessel.lat && vessel.lon) {
+                        features.push($scope.generateVesselFeature(vessel));
+                        selVesselPosUpdated |= $scope.checkUpdateSelectedVessel(vessel);
                     }
                 });
                 vesselLayer.removeAllFeatures();
@@ -412,16 +421,22 @@ angular.module('vesseltrack.app')
             $scope.updateVesselFeatures = function (vessels) {
                 var deleteFeatures = [];
 
+                // Create a mmsi -> vessel lookup map
+                var vesselLookup = {};
+                $.each(vessels, function (index, vessel) {
+                    vesselLookup[vessel.mmsi] = vessel;
+                });
+
                 // Look at existing features and find deleted and changed vessel feature
                 $.each(vesselLayer.features, function (index, feature) {
                     if (feature.attributes && feature.attributes.mmsi) {
-                       var vessel = vessels[feature.attributes.mmsi];
+                       var vessel = vesselLookup[feature.attributes.mmsi];
                        if (!vessel) {
                            deleteFeatures.push(feature);
                        } else {
                            vessel.existing = true;
                            // Check if the vessel has a newer last-report date
-                           if (feature.attributes.vessel[5] < vessel[5]) {
+                           if (feature.attributes.vessel.lastReport < vessel.lastReport) {
                                deleteFeatures.push(feature);
                                vessel.existing = false; // We need to add it again
                            }
@@ -435,11 +450,11 @@ angular.module('vesseltrack.app')
                 // Add new features
                 var features = [];
                 var selVesselPosUpdated = false;
-                $.each(vessels, function (mmsi, vessel) {
+                $.each(vessels, function (index, vessel) {
                     // Check that the vessel has a valid position
-                    if (!vessel.existing && features.length < 10000 && vessel[0] && vessel[1]) {
-                        features.push($scope.generateVesselFeature(mmsi, vessel));
-                        selVesselPosUpdated |= $scope.checkUpdateSelectedVessel(mmsi, vessel);
+                    if (!vessel.existing && features.length < 10000 && vessel.lat && vessel.lon) {
+                        features.push($scope.generateVesselFeature(vessel));
+                        selVesselPosUpdated |= $scope.checkUpdateSelectedVessel(vessel);
                     }
                 });
                 vesselLayer.addFeatures(features);
@@ -454,18 +469,17 @@ angular.module('vesseltrack.app')
              * Check if the selected vessel needs to be updated
              * @return if the position or COG was updated
              */
-            $scope.checkUpdateSelectedVessel = function (mmsi, vessel) {
+            $scope.checkUpdateSelectedVessel = function (vessel) {
                 var posUpdate = false;
-                if ($scope.selVessel && $scope.selVessel.mmsi == mmsi && $scope.selVessel.lastReport < vessel[5]) {
-                    posUpdate = $scope.selVessel.lat != vessel[0] || $scope.selVessel.lon != vessel[1] || $scope.selVessel.cog != vessel[2];
-                    console.log("Updating selected MMSI ");
-                    $scope.selVessel.lat = vessel[0];
-                    $scope.selVessel.lon = vessel[1];
-                    $scope.selVessel.cog = vessel[2];
-                    $scope.selVessel.vesselType = vessel[3];
-                    $scope.selVessel.navStatus = vessel[4];
-                    $scope.selVessel.lastReport = vessel[5];
-                    $scope.selVessel.name = vessel[6];
+                if ($scope.selVessel && $scope.selVessel.mmsi == vessel.mmsi && $scope.selVessel.lastReport < vessel.lastReport) {
+                    posUpdate = $scope.selVessel.lat != vessel.lat || $scope.selVessel.lon != vessel.lon || $scope.selVessel.cog != vessel.cog;
+                    $scope.selVessel.lat = vessel.lat;
+                    $scope.selVessel.lon = vessel.lon;
+                    $scope.selVessel.cog = vessel.cog;
+                    $scope.selVessel.vesselType = vessel.vesselType;
+                    $scope.selVessel.navStatus = vessel.navStatus;
+                    $scope.selVessel.lastReport = vessel.lastReport;
+                    $scope.selVessel.name = vessel.name;
                 }
                 return posUpdate;
             };
@@ -603,5 +617,86 @@ angular.module('vesseltrack.app')
                     }
                 },
                 true);
+
+
+            /*********************************/
+            /* Searching                     */
+            /*********************************/
+
+            // Initialize the filter field
+            $timeout(function () {
+                $scope.searchFilterField = VS.init({
+                    container: $('#searchFilter'),
+                    query: '',
+                    showFacets: true,
+                    unquotable: [],
+                    callbacks: {
+                        search: function (query, searchCollection) {
+                            $scope.$apply(function () {
+                                $scope.search.filter = $scope.searchFilterField.searchBox.value();
+                                if (!$rootScope.$$phase) $rootScope.$apply();
+                            });
+                        },
+                        facetMatches: function (callback) {
+                            callback(['mmsi', 'callsign', 'imo', 'name', 'country', 'type', 'status'], {preserveOrder: true});
+                        },
+                        valueMatches: function (facet, searchTerm, callback) {
+                            VesselTrackService.searchFilterOptions(facet, searchTerm, 20,
+                                function (result) {
+                                    callback(result, {preserveOrder: true});
+                                },
+                                function () { });
+                        }
+                    }
+                });
+            }, 300);
+
+            $scope.search = {
+                filter : undefined,
+                filterVessels : false,
+                vessels : []
+            };
+
+            /** If "searchFilter" is changed, refresh the search result **/
+            $scope.$watch(
+                function() { return $scope.search.filter },
+                function(data) {
+                    if (!$scope.search.filter) {
+                        $scope.search.vessels = [];
+                        if ($scope.search.filterVessels) {
+                            $scope.scheduleReloadVessels();
+                        }
+                    } else {
+                        VesselTrackService.fetchVessels(
+                            undefined,
+                            undefined,
+                            $scope.search.filter,
+                            100,
+                            function (vessels) {
+                                $scope.search.vessels = vessels;
+                                if ($scope.search.filterVessels) {
+                                    $scope.scheduleReloadVessels();
+                                }
+                            },
+                            function () {
+                                console.error("Error fetching vessels");
+                            }
+                        )
+                    }
+                },
+                true);
+
+            // Make the "Apply Filter" button really nasty
+            $scope.$watch(
+                function() { return $scope.search.filterVessels },
+                function(filter) {
+                    if (filter) {
+                        replaceClass('#filter-btn', 'btn-default', 'btn-danger');
+                        $scope.scheduleReloadVessels();
+                    } else {
+                        replaceClass('#filter-btn', 'btn-danger', 'btn-default');
+                        $scope.scheduleReloadVessels();
+                    }
+                }, false);
 
         }]);

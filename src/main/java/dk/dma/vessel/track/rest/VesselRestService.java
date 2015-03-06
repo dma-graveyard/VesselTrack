@@ -1,7 +1,7 @@
 package dk.dma.vessel.track.rest;
 
-import dk.dma.ais.message.NavigationalStatus;
 import dk.dma.ais.message.ShipTypeCargo;
+import dk.dma.ais.message.ShipTypeCargo.ShipType;
 import dk.dma.vessel.track.model.PastTrackPos;
 import dk.dma.vessel.track.model.VesselTarget;
 import dk.dma.vessel.track.store.TargetStore;
@@ -18,10 +18,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -50,13 +48,13 @@ public class VesselRestService  {
             method = RequestMethod.GET,
             produces = "application/json;charset=UTF-8")
     @ResponseBody
-    public VesselTargetVo getTarget(@PathVariable("mmsi") Integer mmsi, HttpServletResponse response) {
+    public VesselTargetDetailsVo getTarget(@PathVariable("mmsi") Integer mmsi, HttpServletResponse response) {
         VesselTarget target = targetStore.get(mmsi);
         if (target == null) {
             response.setStatus( HttpServletResponse.SC_BAD_REQUEST);
             return null;
         }
-        return new VesselTargetVo(target);
+        return new VesselTargetDetailsVo(target);
     }
 
     /**
@@ -73,31 +71,33 @@ public class VesselRestService  {
             method = RequestMethod.GET,
             produces = "application/json;charset=UTF-8")
     @ResponseBody
-    public Map<String, Object[]> getVessels(
+    public List<VesselTargetListVo> getVessels(
             @RequestParam(value="top", defaultValue = "90") Float top,
             @RequestParam(value="left", defaultValue = "-180") Float left,
             @RequestParam(value="bottom", defaultValue = "-90") Float bottom,
             @RequestParam(value="right", defaultValue = "180") Float right,
-            @RequestParam(value="mmsi", required = false) Integer[] mmsi
+            @RequestParam(value="mmsi", required = false) Integer[] mmsi,
+            @RequestParam(value="filter", required = false) String filter,
+            @RequestParam(value="maxHits", required = false) Integer maxHits
     ) throws Exception {
 
         long t0 = System.currentTimeMillis();
-        Map<String, Object[]> result = new HashMap<>();
 
-        targetStore.list().stream()
-                .filter(withinOpenLayersBoundsOrMmsi(top, left, bottom, right, mmsi))
-                .forEach(v -> {
-                    Object[] data = new Object[7];
-                    int i = 0;
-                    data[i++] = v.getLat();
-                    data[i++] = v.getLon();
-                    data[i++] = v.getCog();
-                    data[i++] = getShipType(v).ordinal();
-                    data[i++] = v.getNavStatus() != null ? v.getNavStatus().getCode() : NavigationalStatus.UNDEFINED.getCode();
-                    data[i++] = v.getLastReport().getTime();
-                    data[i++] = v.getName();
-                    result.put(String.valueOf(v.getMmsi()), data);
-                });
+        if (maxHits == null) {
+            maxHits = Integer.MAX_VALUE;
+        }
+
+        // Construct the filters used for filtering the vessel target list
+        Predicate<VesselTarget> mmsiFilter = hasMmsi(mmsi);
+        Predicate<VesselTarget> boundsFilter = withinOpenLayersBounds(top, left, bottom, right);
+        VesselTargetFilter searchFilter = new VesselTargetFilter(filter);
+
+        List<VesselTargetListVo> result = targetStore.list()
+                .stream()
+                .filter(t -> mmsiFilter.test(t) || (boundsFilter.test(t) && searchFilter.test(t)))
+                .limit(maxHits)
+                .map(VesselTargetListVo::new)
+                .collect(Collectors.toList());
 
         LOG.info(String.format("/list returned %d targets in %d ms", result.size(), System.currentTimeMillis() - t0));
 
@@ -145,43 +145,38 @@ public class VesselRestService  {
      * @param target the vessel target
      * @return the ship type of the given vessel target
      */
-    public static ShipTypeCargo.ShipType getShipType(VesselTarget target) {
+    public static ShipType getShipType(VesselTarget target) {
         if (target.getVesselType() != null) {
             ShipTypeCargo shipTypeCargo = new ShipTypeCargo(target.getVesselType());
             return shipTypeCargo.getShipType();
         }
-        return ShipTypeCargo.ShipType.UNDEFINED;
+        return ShipType.UNDEFINED;
     }
 
     /**
-     * A predicate that filters for vessels that are withing the given OpenLayers bounds or in the list of MMSI
-     * @param top the top latitude
-     * @param left the left longitude
-     * @param bottom the bottom latitude
-     * @param right the right longitude
-     * @param mmsi optionally, a list of mmsi to include
-     * @return if the vessel is withing the given bounds
+     * Returns a predicates that include targets with an mmsi in the list
+     * @param mmsi the MMSI's to include
+     * @return a predicate filtering the targets on MMSI
      */
-    private static Predicate<VesselTarget> withinOpenLayersBoundsOrMmsi(float top, float left, float bottom, float right, Integer[] mmsi) {
+    private static Predicate<VesselTarget> hasMmsi(Integer[] mmsi) {
         final Set<Integer> mmsiLookup = new HashSet<>();
         if (mmsi != null && mmsi.length > 0) {
             mmsiLookup.addAll(Arrays.asList(mmsi));
         }
-        return t -> {
-            // Must have a valid position
-            if (t.getLat() == null && t.getLon() == null) {
-                return false;
-            }
+        return t -> mmsiLookup.contains(t.getMmsi());
+    }
 
-            // Check if the mmsi param has been specified
-            if (mmsiLookup.size() > 0 && mmsiLookup.contains(t.getMmsi())) {
-                return true;
-            }
-
-            // Check that the vessel is within the bounds
-            return  t.getLat() <= top && t.getLat() >= bottom &&
-                    withinOpenLayersLongitude(t.getLon(), left, right);
-        };
+    /**
+     * A predicate that filters for vessels that are withing the given OpenLayers bounds
+     * @param top the top latitude
+     * @param left the left longitude
+     * @param bottom the bottom latitude
+     * @param right the right longitude
+     * @return if the vessel is withing the given bounds
+     */
+    private static Predicate<VesselTarget> withinOpenLayersBounds(float top, float left, float bottom, float right) {
+        return t -> !(t.getLat() == null || t.getLon() == null) &&
+                    t.getLat() <= top && t.getLat() >= bottom && withinOpenLayersLongitude(t.getLon(), left, right);
     }
 
     /**
@@ -204,4 +199,26 @@ public class VesselRestService  {
        }
        return lon >= left && lon <= right;
    }
+
+
+    /**
+     * Rest call used for returning an auto-complete search filter option list
+     * @param key the type of vessel target attribute to filter on
+     * @param term the search term
+     * @param maxHits the maximum number of values to return
+     * @return the search filter option list
+     */
+    @RequestMapping(
+            value = "/search-options",
+            method = RequestMethod.GET,
+            produces = "application/json;charset=UTF-8")
+    @ResponseBody
+    public List<VesselTargetFilter.SearchFilterOptionVo> getSearchFilterOptions(
+            @RequestParam(value="key") String key,
+            @RequestParam(value="term", defaultValue = "") String term,
+            @RequestParam(value="maxHits", defaultValue = "20") int maxHits
+    ) {
+        return VesselTargetFilter.getSearchFilterOptions(targetStore, key, term, maxHits);
+    }
+
 }

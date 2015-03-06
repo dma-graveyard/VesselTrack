@@ -38,6 +38,10 @@ public class TargetStore {
 
     public static final String LOAD_TARGETS_SQL =
             "SELECT t FROM " + VesselTarget.class.getSimpleName() + " t " +
+                    " where t.lastReport > :lastReport";
+
+    public static final String LOAD_TARGETS_INCL_PAST_TRACKS_SQL =
+            "SELECT t FROM " + VesselTarget.class.getSimpleName() + " t " +
                     " left join fetch t.lastPastTrackPos p " +
                     " where t.lastReport > :lastReport";
 
@@ -69,6 +73,9 @@ public class TargetStore {
     @Value("${pastTrackMinDist}")
     String pastTrackMinDist;
 
+    @Value("${slave:false}")
+    boolean slave;
+
     ConcurrentHashMap<Integer, VesselTarget> cache;
 
     boolean stopped;
@@ -81,7 +88,7 @@ public class TargetStore {
     public void init() throws IOException, ClassNotFoundException {
 
         cache = new ConcurrentHashMap<>();
-        LOG.info("Initialized target store with expiry: " + targetExpire);
+        LOG.info("Starting up as " + (slave ? "read-only slave instance" : "master instance"));
 
         // Load data from the DB
         loadFromDB();
@@ -109,24 +116,41 @@ public class TargetStore {
         long t0 = System.currentTimeMillis();
         long expiry = t0 - Duration.parse(targetExpire).toMillis();
 
-        // Prime the vessel target table. It increases the speed of the subsequent SQL dramatically
-        LOG.debug("Priming DB with " + em.createQuery(PRIME_TARGETS_DB_SQL)
-                .getResultList().stream().count() + " vessels");
+        ConcurrentHashMap<Integer, VesselTarget> newCache = new ConcurrentHashMap<>();
 
-        // Load and cache all active vessel targets
-        em.createQuery(LOAD_TARGETS_SQL, VesselTarget.class)
-                .setParameter("lastReport", new Date(expiry))
-                .getResultList()
-                .forEach(t -> cache.put(t.getMmsi(), t));
-        em.clear();
+        if (slave) {
+            // Load and cache all active vessel targets
+            em.createQuery(LOAD_TARGETS_SQL, VesselTarget.class)
+                    .setParameter("lastReport", new Date(expiry))
+                    .getResultList()
+                    .forEach(t -> newCache.put(t.getMmsi(), t));
+            em.clear();
 
-        // Past track stats
-        long pastTrackCnt = cache.values().stream()
-                .filter(t -> t.getLastPastTrackPos() != null)
-                .count();
+            LOG.info("Loaded " + newCache.size() + " targets from DB in " + (System.currentTimeMillis() - t0) + " ms");
 
-        LOG.info("**** Loaded " + cache.size() + " targets (of which " + pastTrackCnt +
-                " has past-tracks) from DB in " + (System.currentTimeMillis() - t0) + " ms");
+        } else {
+            // Prime the vessel target table. It increases the speed of the subsequent SQL dramatically
+            LOG.debug("Priming DB with " + em.createQuery(PRIME_TARGETS_DB_SQL)
+                    .getResultList().stream().count() + " vessels");
+
+            // Load and cache all active vessel targets
+            em.createQuery(LOAD_TARGETS_INCL_PAST_TRACKS_SQL, VesselTarget.class)
+                    .setParameter("lastReport", new Date(expiry))
+                    .getResultList()
+                    .forEach(t -> newCache.put(t.getMmsi(), t));
+            em.clear();
+
+            // Past track stats
+            long pastTrackCnt = newCache.values().stream()
+                    .filter(t -> t.getLastPastTrackPos() != null)
+                    .count();
+
+            LOG.info("**** Loaded " + newCache.size() + " targets (of which " + pastTrackCnt +
+                    " has past-tracks) from DB in " + (System.currentTimeMillis() - t0) + " ms");
+        }
+
+        // Update the current cache
+        cache = newCache;
     }
 
     /**
@@ -141,11 +165,17 @@ public class TargetStore {
     }
 
     /**
+     * Only used by master instances:<br>
      * Periodically delete expired past tracks from the database
      */
     @Scheduled(cron="50 17 9 */1 * *")
     @Transactional
     public void periodicallyExpirePastTracks() {
+        // Only master instance expires past tracks
+        if (slave) {
+            return;
+        }
+
         long t0 = System.currentTimeMillis();
         long expiry = t0 - Duration.parse(pastTrackExpire).toMillis();
         try {
@@ -159,12 +189,32 @@ public class TargetStore {
     }
 
     /**
+     * Only used by slave instances:<br>
+     * Periodically load vessel targets and past tracks from the database
+     */
+    @Scheduled(cron="40 */1 * * * *")
+    @Transactional
+    @SuppressWarnings("all")
+    public void periodicallyLoadFromDB() {
+        // Only slave instances loads data periodically from the DB
+        if (slave) {
+            loadFromDB();
+        }
+    }
+
+    /**
+     * Only used by master instances:<br>
      * Periodically save changed vessel targets and past tracks to the database
      */
     @Scheduled(cron="20 */1 * * * *")
     @Transactional
     @SuppressWarnings("all")
     public void periodicallySaveToDB() {
+        // Only master instances saves data periodically to the DB
+        if (slave) {
+            return;
+        }
+
         try {
             long t0 = System.currentTimeMillis();
             int cntNewTargets = 0, cntUpdatedTargets = 0, cntNewPastTrack = 0;
@@ -224,13 +274,14 @@ public class TargetStore {
     }
 
     /**
+     * Only used by master instances:<br>
      * Merges the new AIS packet into the vessel target cache
      * @param packet the AIS packet
      * @param message the AIS message
      * @return the merged vessel target
      */
     public VesselTarget merge(AisPacket packet, AisMessage message) {
-        if (started && !stopped) {
+        if (!slave && started && !stopped) {
             VesselTarget target = cache.computeIfAbsent(message.getUserId(), VesselTarget::new);
             target.merge(packet, message);
             return target;
@@ -302,7 +353,7 @@ public class TargetStore {
             result.add(0, currentPos);
         }
 
-        // Downsample the past track position list
+        // Down-sample the past track position list
         return PastTrack.downSample(result, minDist, age.toMillis());
     }
 

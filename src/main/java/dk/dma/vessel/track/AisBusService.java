@@ -31,6 +31,9 @@ public class AisBusService {
     @Value("${aisbusFilter:}")
     String aisbusFilter;
 
+    @Value("${slave:false}")
+    boolean slave;
+
     private AisBus aisBus;
 
     @Autowired
@@ -38,27 +41,33 @@ public class AisBusService {
 
     @PostConstruct
     public void init() throws FileNotFoundException, JAXBException {
-        LOG.info("Starting AIS bus using config: " + aisbusPath);
+        // Only master instances listens to the AIS bus
+        if (slave) {
+            LOG.info("AIS bus not used in slave instances");
 
-        // Load AisBus configuration
-        AisBusConfiguration aisBusConf = AisBusConfiguration.load(aisbusPath);
+        } else {
+            LOG.info("Starting AIS bus using config: " + aisbusPath);
 
-        // Check if we need to update an expression filter
-        if (StringUtils.isNotBlank(aisbusFilter)) {
-            LOG.info("**** Setting AIS bus filter: " + aisbusFilter);
-            createExpressionFilter(aisBusConf, aisbusFilter);
+            // Load AisBus configuration
+            AisBusConfiguration aisBusConf = AisBusConfiguration.load(aisbusPath);
+
+            // Check if we need to update an expression filter
+            if (StringUtils.isNotBlank(aisbusFilter)) {
+                LOG.info("**** Setting AIS bus filter: " + aisbusFilter);
+                createExpressionFilter(aisBusConf, aisbusFilter);
+            }
+
+            aisBus = aisBusConf.getInstance();
+
+            // Create distributor consumer and add to aisBus
+            DistributerConsumer distributer = new DistributerConsumer();
+            distributer.getConsumers().add(handler);
+            distributer.init();
+            aisBus.registerConsumer(distributer);
+            aisBus.start();
+            aisBus.startConsumers();
+            aisBus.startProviders();
         }
-
-        aisBus = aisBusConf.getInstance();
-
-        // Create distributor consumer and add to aisBus
-        DistributerConsumer distributer = new DistributerConsumer();
-        distributer.getConsumers().add(handler);
-        distributer.init();
-        aisBus.registerConsumer(distributer);
-        aisBus.start();
-        aisBus.startConsumers();
-        aisBus.startProviders();
     }
 
     /**
@@ -87,9 +96,12 @@ public class AisBusService {
     @PreDestroy
     public void destroy() {
         try {
-            LOG.info("Shutting down AIS bus");
-            aisBus.cancel();
-            Thread.sleep(2000);
+            if (aisBus != null) {
+                LOG.info("Shutting down AIS bus");
+                aisBus.cancel();
+                aisBus = null;
+                Thread.sleep(2000);
+            }
         } catch (Exception e) {
             LOG.error("Error shutting down AIS bus", e);
         }

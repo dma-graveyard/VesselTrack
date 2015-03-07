@@ -307,6 +307,7 @@ public class TargetStore {
      * @param age the minimum duration of the past track positions
      * @return the past track
      */
+    @Transactional
     public List<PastTrackPos> getPastTracks(int mmsi, Integer minDist, Duration age) {
         List<PastTrackPos> result = new ArrayList<>();
 

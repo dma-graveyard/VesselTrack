@@ -160,7 +160,7 @@ angular.module('vesseltrack.app')
                         col = "purple";
                         break;
                     default:
-                        col = "gray";
+                        col = "turquoise";
                 }
                 if (status == 1 || status == 5) {
                     return {

@@ -126,7 +126,7 @@ angular.module('vesseltrack.app')
                     }, { context: this.context })
                 })
             });
-            clusterLayer.setOpacity(0.5);
+            clusterLayer.setOpacity(0.4);
 
             var selectionLayer = new OpenLayers.Layer.Vector("Selection", {
                 styleMap : new OpenLayers.StyleMap({
@@ -193,6 +193,7 @@ angular.module('vesseltrack.app')
             var overviewMap = new OpenLayers.Control.OverviewMap({
                 div: $('#overviewMap')[0],
                 minRatio: 20,
+                maxRatio: 20,
                 autoPan: true
             });
             $scope.map.addControl(overviewMap);

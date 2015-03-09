@@ -20,6 +20,8 @@ angular.module('vesseltrack.app')
             $scope.vesselScale = 0.7;
             $scope.detaultSelectZoom = 10;
 
+            $('.info-panel').css('z-index','1000');
+
             /**
              * Schedules the loading of vessels for the given bounds
              * @param bounds the bounds to load the vessels for
@@ -84,6 +86,12 @@ angular.module('vesseltrack.app')
                 '//a.tile.openstreetmap.org/${z}/${x}/${y}.png',
                 '//b.tile.openstreetmap.org/${z}/${x}/${y}.png',
                 '//c.tile.openstreetmap.org/${z}/${x}/${y}.png' ], null);
+
+            var googleMapsLayer = new OpenLayers.Layer.Google(
+                "Google", {
+                    type: google.maps.MapTypeId.HYBRID,
+                    numZoomLevels: 20
+                });
 
             var vesselLayer = new OpenLayers.Layer.Vector("Vessels", {
                 styleMap : new OpenLayers.StyleMap({
@@ -172,6 +180,15 @@ angular.module('vesseltrack.app')
                 })
             });
 
+            // Toggle the base layer between Google and OSM
+            $scope.showGoogleMaps = false;
+            $scope.$watch(
+                function() { return $scope.showGoogleMaps; },
+                function(checked) {
+                    $scope.map.setBaseLayer(checked ? googleMapsLayer : osmLayer);
+                }
+            );
+
 
             /*********************************/
             /* Map                           */
@@ -180,7 +197,7 @@ angular.module('vesseltrack.app')
             $scope.map = new OpenLayers.Map({
                 div: 'map',
                 theme: null,
-                layers: [ osmLayer, clusterLayer, vesselLayer, selectionLayer, trackLayer, trackLabelLayer ],
+                layers: [ osmLayer, googleMapsLayer, clusterLayer, vesselLayer, selectionLayer, trackLayer, trackLabelLayer ],
                 units: "degrees",
                 projection: projmerc,
                 center: new OpenLayers.LonLat($scope.mapSettings.lon, $scope.mapSettings.lat).transform(proj4326, projmerc),

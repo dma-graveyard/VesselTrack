@@ -54,6 +54,9 @@
         <!-- Overview Map Info Panel -->
         <div class="overview-map" ng-show="activeInfoPanel == 'map'">
             <div id="overviewMap" style="width: 182px; height: 92px; border: 1px solid gray;margin: auto;"></div>
+            <div class="base-layer">
+                <input type="checkbox" ng-model="showGoogleMaps">&nbsp;Satellite
+            </div>
         </div>
 
 
@@ -207,6 +210,7 @@
     </div>
 
     <!-- JavaScript -->
+    <script src="//maps.google.com/maps/api/js?v=3&amp;sensor=false"></script>
     <script src="ext/jquery-1.11.2/jquery-1.11.2.min.js"></script>
     <script src="ext/angularjs-1.3.8/angular.min.js"></script>
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>

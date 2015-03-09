@@ -57,7 +57,7 @@ body {
     padding: 5px;
     background-color: #ffffff;
     opacity: 0.8;
-    z-index: 1000;
+    z-index: -10; /** initially below map **/
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
     -moz-user-select: none;
     -khtml-user-select: none;
@@ -123,6 +123,12 @@ body {
 .overview-map {
     width: 100%;
     padding: 10px 0 5px 0;
+}
+
+.base-layer {
+    text-align: center;
+    padding-top: 5px;
+    font-size: 10px;
 }
 
 .legends {

@@ -14,15 +14,14 @@
  */
 package dk.dma.vessel.track.rest.arcticweb;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import dk.dma.ais.message.AisTargetType;
 import dk.dma.ais.message.NavigationalStatus;
 import dk.dma.ais.message.ShipTypeCargo;
 import dk.dma.vessel.track.model.VesselTarget;
+import dk.dma.vessel.track.rest.JsonSerializable;
 
-import java.io.Serializable;
-import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * Vessel class A and B target
@@ -31,17 +30,16 @@ import java.util.Date;
  * and is used by ActicWeb for now
  */
 @SuppressWarnings("unused")
-@JsonIgnoreProperties(ignoreUnknown=true)
-@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
-public class AWVesselTargetVo implements Serializable {
+public class AWVesselTargetVo implements JsonSerializable {
 
     private static final long serialVersionUID = 1L;
 
     AisTargetType targetType;
     int mmsi;
     String country;
-    Date lastReport;
-    Date lastPosReport;
+    String lastReport;
+    String lastPosReport;
+    String lastStaticReport;
     Float lat;
     Float lon;
     Float cog;
@@ -57,7 +55,7 @@ public class AWVesselTargetVo implements Serializable {
     Float draught;
     String navStatus;
     Boolean moored;
-    Date eta;
+    String eta;
     String vesselType;
     String vesselCargo;
 
@@ -69,10 +67,14 @@ public class AWVesselTargetVo implements Serializable {
      * @param t the vessel target
      */
     public AWVesselTargetVo(VesselTarget t) {
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
         mmsi = t.getMmsi();
         targetType = t.getTargetType();
         country = t.getCountry();
-        lastReport = t.getLastReport();
+        lastReport = t.getLastReport() != null ? df.format(t.getLastReport()) : null;
+        lastPosReport = t.getLastPosReport() != null ? df.format(t.getLastPosReport()) : null;
+        lastStaticReport = t.getLastStaticReport() != null ? df.format(t.getLastStaticReport()) : null;
 
         // Position data
         sog = t.getSog();
@@ -81,7 +83,7 @@ public class AWVesselTargetVo implements Serializable {
         lat = t.getLat();
         lon = t.getLon();
         rot = t.getRot();
-        navStatus =  t.getNavStatus() != null ? t.getNavStatus().prettyStatus() : null;
+        navStatus = t.getNavStatus() != null ? t.getNavStatus().prettyStatus() : null;
         moored = (t.getNavStatus() == NavigationalStatus.AT_ANCHOR || t.getNavStatus() == NavigationalStatus.MOORED);
 
         // Static data
@@ -96,7 +98,7 @@ public class AWVesselTargetVo implements Serializable {
         width = t.getWidth();
         destination = t.getDestination();
         draught = t.getDraught();
-        eta = t.getEta();
+        eta = t.getEta() != null ? df.format(t.getEta()) : null;
         imoNo = t.getImoNo();
     }
 
@@ -132,20 +134,28 @@ public class AWVesselTargetVo implements Serializable {
         this.country = country;
     }
 
-    public Date getLastReport() {
+    public String getLastReport() {
         return lastReport;
     }
 
-    public void setLastReport(Date lastReport) {
+    public void setLastReport(String lastReport) {
         this.lastReport = lastReport;
     }
 
-    public Date getLastPosReport() {
+    public String getLastPosReport() {
         return lastPosReport;
     }
 
-    public void setLastPosReport(Date lastPosReport) {
+    public void setLastPosReport(String lastPosReport) {
         this.lastPosReport = lastPosReport;
+    }
+
+    public String getLastStaticReport() {
+        return lastStaticReport;
+    }
+
+    public void setLastStaticReport(String lastStaticReport) {
+        this.lastStaticReport = lastStaticReport;
     }
 
     public Float getLat() {
@@ -268,11 +278,11 @@ public class AWVesselTargetVo implements Serializable {
         this.moored = moored;
     }
 
-    public Date getEta() {
+    public String getEta() {
         return eta;
     }
 
-    public void setEta(Date eta) {
+    public void setEta(String eta) {
         this.eta = eta;
     }
 

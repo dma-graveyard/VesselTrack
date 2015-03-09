@@ -14,20 +14,15 @@
  */
 package dk.dma.vessel.track.rest;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import dk.dma.vessel.track.model.PastTrackPos;
 
-import java.io.Serializable;
 import java.util.Date;
 
 /**
  * Defines a value object for the past track position entity
  */
-@JsonIgnoreProperties(ignoreUnknown=true)
-@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 @SuppressWarnings("unused")
-public class PastTrackPosVo implements Serializable {
+public class PastTrackPosVo implements JsonSerializable {
 
     private static final long serialVersionUID = 1L;
 

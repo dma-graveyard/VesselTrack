@@ -71,12 +71,12 @@ public class VesselRestService  {
     }
 
     /**
-     * Rest cal used for returning the vessels within the given OpenLayers bounds
+     * REST call used for returning the vessels within the given OpenLayers bounds
      * @param top the top latitude
      * @param left the left longitude
      * @param bottom the bottom latitude
      * @param right the right longitude
-     * @param mmsi optionally, a list of mmsi to include
+     * @param mmsi optionally, a list of MMSI to always include
      * @return the list of vessels within the bounds
      */
     @RequestMapping(
@@ -100,21 +100,76 @@ public class VesselRestService  {
             maxHits = Integer.MAX_VALUE;
         }
 
+        List<VesselTargetListVo> result = computeVessels(top, left, bottom, right, mmsi, filter, maxHits);
+
+        LOG.info(String.format("/list returned %d vessels in %d ms", result.size(), System.currentTimeMillis() - t0));
+
+        return result;
+    }
+
+    /**
+     * REST call used for returning the vessels within the given OpenLayers bounds.
+     * The returned data contains a list of cluster entities and vessels.
+     *
+     * @param top the top latitude
+     * @param left the left longitude
+     * @param bottom the bottom latitude
+     * @param right the right longitude
+     * @param mmsi optionally, a list of MMSI to always include
+     * @return the list of vessels within the bounds
+     */
+    @RequestMapping(
+            value = "/cluster-list",
+            method = RequestMethod.GET,
+            produces = "application/json;charset=UTF-8")
+    @ResponseBody
+    public VesselClusterResultVo getVesselClusters(
+            @RequestParam(value="top", defaultValue = "90") Float top,
+            @RequestParam(value="left", defaultValue = "-180") Float left,
+            @RequestParam(value="bottom", defaultValue = "-90") Float bottom,
+            @RequestParam(value="right", defaultValue = "180") Float right,
+            @RequestParam(value="mmsi", required = false) Integer[] mmsi,
+            @RequestParam(value="filter", required = false) String filter,
+            @RequestParam(value="cellSize", required = false) Float cellSize
+    ) throws Exception {
+
+        long t0 = System.currentTimeMillis();
+
+        List<VesselTargetListVo> vessels = computeVessels(top, left, bottom, right, mmsi, filter, Integer.MAX_VALUE);
+
+        cellSize = (cellSize == null) ? (float)0.1 : cellSize;
+        VesselClusterResultVo result = VesselClusterResultVo.computeClusterResult(vessels, mmsi, 1, 40, cellSize);
+
+        LOG.info(String.format("/cluster-list returned %d vessels and %d clusters in %d ms",
+                result.getVessels().size(),
+                result.getClusters().size(),
+                System.currentTimeMillis() - t0));
+
+        return result;
+    }
+
+    /**
+     * Computes the vessels within the given OpenLayers bounds
+     * @param top the top latitude
+     * @param left the left longitude
+     * @param bottom the bottom latitude
+     * @param right the right longitude
+     * @param mmsi optionally, a list of MMSI to always include
+     * @return the list of vessels within the bounds
+     */
+    public List<VesselTargetListVo> computeVessels(Float top, Float left, Float bottom, Float right, Integer[] mmsi, String filter, int maxHits) throws Exception {
+
         // Construct the filters used for filtering the vessel target list
         Predicate<VesselTarget> mmsiFilter = hasMmsi(mmsi);
         Predicate<VesselTarget> boundsFilter = withinOpenLayersBounds(top, left, bottom, right);
         VesselTargetFilter searchFilter = new VesselTargetFilter(filter);
 
-        List<VesselTargetListVo> result = targetStore.list()
+        return targetStore.list()
                 .stream()
                 .filter(t -> mmsiFilter.test(t) || (boundsFilter.test(t) && searchFilter.test(t)))
                 .limit(maxHits)
                 .map(VesselTargetListVo::new)
                 .collect(Collectors.toList());
-
-        LOG.info(String.format("/list returned %d targets in %d ms", result.size(), System.currentTimeMillis() - t0));
-
-        return result;
     }
 
     /**

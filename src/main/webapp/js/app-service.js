@@ -25,6 +25,43 @@ angular.module('vesseltrack.app')
             },
 
             /**
+             * Computes the cluster cell size based on the zoom lever
+             * @param zoom the zoom level
+             * @return number cluster cell size
+             */
+            getClusterSize: function(zoom) {
+                console.log("ZOOM " + zoom);
+                switch (zoom) {
+                    case 1: return 20;
+                    case 2: return 12;
+                    case 3: return 6;
+                    case 4: return 3;
+                    case 5: return 1.5;
+                    case 6: return 0.80;
+                    case 7: return 0.40;
+                    case 8: return 0.20;
+                    default: return 0.001;
+                }
+            },
+
+            /**
+             * Computes the cluster color
+             * @param cluster
+             * @return string cluster color
+             */
+            getClusterColor: function (cluster) {
+                if (cluster.density <= 0.005) {
+                    return "#ffdd00";
+                } else if (cluster.density <= 0.02) {
+                    return "#ff8800";
+                } else if (cluster.density <= 0.1) {
+                    return "#ff0000";
+                } else {
+                    return "#ff00ff";
+                }
+            },
+
+            /**
              * Stores the given map settings
              */
             storeMapSettings: function(settings) {
@@ -53,6 +90,23 @@ angular.module('vesseltrack.app')
                     params = params.slice(1);
                 }
                 $http.get('vessels/list?' + params)
+                    .success(success)
+                    .error(error);
+            },
+
+            /**
+             * fetches all vessel clusters within the given bounds
+             */
+            fetchVesselClusters: function(bounds, mmsi, filter, zoom, success, error) {
+                var params =
+                    (bounds  ? '&top=' + bounds.top + '&left=' + bounds.left + '&bottom=' + bounds.bottom + '&right=' + bounds.right : '')
+                    + (mmsi    ? '&mmsi=' + mmsi : '')
+                    + (filter  ? '&filter=' + encodeURIComponent(filter) : '')
+                    + (zoom ? '&cellSize=' + this.getClusterSize(zoom) : '');
+                if (params.length > 0) {
+                    params = params.slice(1);
+                }
+                $http.get('vessels/cluster-list?' + params)
                     .success(success)
                     .error(error);
             },

@@ -85,16 +85,6 @@ angular.module('vesseltrack.app')
                 '//b.tile.openstreetmap.org/${z}/${x}/${y}.png',
                 '//c.tile.openstreetmap.org/${z}/${x}/${y}.png' ], null);
 
-            var vesselContext = {
-                graphicWidth: function(feature) { return 20; },
-                graphicHeight: function(feature) { return 10; },
-                graphicXOffset: function(feature) { return -vesselContext.graphicWidth() / 2; },
-                graphicYOffset: function(feature) { return -vesselContext.graphicHeight() / 2; },
-                image: function(feature) {
-                    return "img/vessel/vessel_blue.png";//feature.data.image;
-                }
-            };
-
             var vesselLayer = new OpenLayers.Layer.Vector("Vessels", {
                 styleMap : new OpenLayers.StyleMap({
                     "default" : new OpenLayers.Style({
@@ -120,6 +110,23 @@ angular.module('vesseltrack.app')
                 ]
 
             });
+
+            var clusterLayer = new OpenLayers.Layer.Vector("Vessels Clusters", {
+                styleMap: new OpenLayers.StyleMap({
+                    "default": new OpenLayers.Style({
+                        fillColor: "${fill}",
+                        strokeWidth: "1",
+                        strokeColor: "${fill}",
+                        fontColor: "#fff",
+                        fontSize: "10px",
+                        fontFamily: "Courier New, monospace",
+                        fontWeight: "bold",
+                        label: "${label}",
+                        labelOutlineWidth: 0
+                    }, { context: this.context })
+                })
+            });
+            clusterLayer.setOpacity(0.5);
 
             var selectionLayer = new OpenLayers.Layer.Vector("Selection", {
                 styleMap : new OpenLayers.StyleMap({
@@ -173,7 +180,7 @@ angular.module('vesseltrack.app')
             $scope.map = new OpenLayers.Map({
                 div: 'map',
                 theme: null,
-                layers: [ osmLayer, vesselLayer, selectionLayer, trackLayer, trackLabelLayer ],
+                layers: [ osmLayer, clusterLayer, vesselLayer, selectionLayer, trackLayer, trackLabelLayer ],
                 units: "degrees",
                 projection: projmerc,
                 center: new OpenLayers.LonLat($scope.mapSettings.lon, $scope.mapSettings.lat).transform(proj4326, projmerc),
@@ -358,16 +365,16 @@ angular.module('vesseltrack.app')
              * @param update whether to update existing feature list or generate a new list
              */
             $scope.fetchVessels = function(bounds, update) {
-                VesselTrackService.fetchVessels(
+                VesselTrackService.fetchVesselClusters(
                     bounds,
                     $scope.selVessel ? $scope.selVessel.mmsi : undefined,
                     $scope.search.filterVessels ? $scope.search.filter : undefined,
-                    undefined,
-                    function (vessels) {
+                    $scope.mapSettings.zoom,
+                    function (result) {
                         if (update) {
-                            $scope.updateVesselFeatures(vessels);
+                            $scope.updateVesselFeatures(result);
                         } else {
-                            $scope.generateVesselFeatures(vessels);
+                            $scope.generateVesselFeatures(result);
                         }
                     },
                     function () {
@@ -377,7 +384,7 @@ angular.module('vesseltrack.app')
             };
 
             /**
-             * Creates a vessel feature from a vessel array
+             * Creates a vessel feature from for the given vessel
              * @param vessel the vessel data
              * @returns the vessel feature
              */
@@ -391,22 +398,50 @@ angular.module('vesseltrack.app')
             };
 
             /**
-             * Generate vessel features for the given list of vessels
-             * @param vessels the vessels to generate features for
+             * Creates the cluster feature for the given cluster
+             * @param cluster
              */
-            $scope.generateVesselFeatures = function (vessels) {
-                var features = [];
-                var selVesselPosUpdated = false;
+            $scope.generateClusterFeature = function (cluster) {
+                var points = [];
+                points.push(createPoint(cluster.from.longitude, cluster.from.latitude));
+                points.push(createPoint(cluster.to.longitude, cluster.from.latitude));
+                points.push(createPoint(cluster.to.longitude, cluster.to.latitude));
+                points.push(createPoint(cluster.from.longitude, cluster.to.latitude));
 
-                $.each(vessels, function (index, vessel) {
+                var rings = [new OpenLayers.Geometry.LinearRing(points)];
+                return new OpenLayers.Feature.Vector(new OpenLayers.Geometry.Polygon(rings), {
+                    fill: VesselTrackService.getClusterColor(cluster),
+                    label: ("" + cluster.count)
+                });
+            };
+
+            /**
+             * Generate vessel features for the given list of vessels
+             * @param result the vessels and clusters to generate features for
+             */
+            $scope.generateVesselFeatures = function (result) {
+
+                // Generate cluster features
+                var clusterFeatures = [];
+                $.each(result.clusters, function (index, cluster) {
+                    clusterFeatures.push($scope.generateClusterFeature(cluster));
+                });
+                clusterLayer.removeAllFeatures();
+                clusterLayer.addFeatures(clusterFeatures);
+                clusterLayer.redraw();
+
+                // Generate vessel features
+                var vesselFeatures = [];
+                var selVesselPosUpdated = false;
+                $.each(result.vessels, function (index, vessel) {
                     // Check that the vessel has a valid position
-                    if (features.length < 10000 && vessel.lat && vessel.lon) {
-                        features.push($scope.generateVesselFeature(vessel));
+                    if (vessel.lat && vessel.lon) {
+                        vesselFeatures.push($scope.generateVesselFeature(vessel));
                         selVesselPosUpdated |= $scope.checkUpdateSelectedVessel(vessel);
                     }
                 });
                 vesselLayer.removeAllFeatures();
-                vesselLayer.addFeatures(features);
+                vesselLayer.addFeatures(vesselFeatures);
                 vesselLayer.redraw();
 
                 if (selVesselPosUpdated) {
@@ -416,14 +451,25 @@ angular.module('vesseltrack.app')
 
             /**
              * Update vessel features for the given list of vessels
-             * @param vessels the vessels to generate features for
+             * @param result the vessels and clusters to generate features for
              */
-            $scope.updateVesselFeatures = function (vessels) {
+            $scope.updateVesselFeatures = function (result) {
+
+                // Re-generate all cluster features
+                var clusterFeatures = [];
+                $.each(result.clusters, function (index, cluster) {
+                    clusterFeatures.push($scope.generateClusterFeature(cluster));
+                });
+                clusterLayer.removeAllFeatures();
+                clusterLayer.addFeatures(clusterFeatures);
+                clusterLayer.redraw();
+
+                // For vessels, only update changed vessels
                 var deleteFeatures = [];
 
                 // Create a mmsi -> vessel lookup map
                 var vesselLookup = {};
-                $.each(vessels, function (index, vessel) {
+                $.each(result.vessels, function (index, vessel) {
                     vesselLookup[vessel.mmsi] = vessel;
                 });
 
@@ -450,7 +496,7 @@ angular.module('vesseltrack.app')
                 // Add new features
                 var features = [];
                 var selVesselPosUpdated = false;
-                $.each(vessels, function (index, vessel) {
+                $.each(result.vessels, function (index, vessel) {
                     // Check that the vessel has a valid position
                     if (!vessel.existing && features.length < 10000 && vessel.lat && vessel.lon) {
                         features.push($scope.generateVesselFeature(vessel));

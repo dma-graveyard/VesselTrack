@@ -14,12 +14,8 @@
  */
 package dk.dma.vessel.track.rest;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import dk.dma.ais.message.NavigationalStatus;
 import dk.dma.vessel.track.model.VesselTarget;
-
-import java.io.Serializable;
 
 import static dk.dma.vessel.track.rest.VesselRestService.getShipType;
 
@@ -27,9 +23,7 @@ import static dk.dma.vessel.track.rest.VesselRestService.getShipType;
  * Vessel target value object used for compact vessel lists
  */
 @SuppressWarnings("unused")
-@JsonIgnoreProperties(ignoreUnknown=true)
-@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
-public class VesselTargetListVo implements Serializable {
+public class VesselTargetListVo implements JsonSerializable {
 
     private static final long serialVersionUID = 1L;
 

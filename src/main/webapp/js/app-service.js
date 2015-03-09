@@ -30,7 +30,6 @@ angular.module('vesseltrack.app')
              * @return number cluster cell size
              */
             getClusterSize: function(zoom) {
-                console.log("ZOOM " + zoom);
                 switch (zoom) {
                     case 1: return 20;
                     case 2: return 12;

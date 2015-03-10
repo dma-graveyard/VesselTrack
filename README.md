@@ -52,18 +52,19 @@ Example (slave instance):
 
 ## Docker
 
-VesselTrack is being built at docker.io [https://registry.hub.docker.com/u/dmadk/vessel-track/](https://registry.hub.docker.com/u/dmadk/vessel-track/)
-
-The base command for running dmadk/vessel-track is:
-
-    sudo docker run dmadk/vessel-track
-
-### MySQL in Docker
-
 An easy way to run a mysql instance:
 
-    docker build -t mysqldb github.com/nkratzke/easymysql
-    docker run -d -p 3306:3306 -e url=https://raw.githubusercontent.com/dma-ais/VesselTrack/master/db/create-database.sql mysqldb
+    docker run -d \
+      -e MYSQL_ROOT_PASSWORD=mysql -e MYSQL_USER=track -e MYSQL_PASSWORD=track -e MYSQL_DATABASE=track \
+      -v /home/docker/mysql/data:/var/lib/mysql \
+      -p 3306:3306 --name trackdb mysql:5.7.4
+
+Which would allow you to run vessel-track using:
+
+    docker build -t test/vessel-track .
+    docker run -d --name vessel-track -p 8080:8080 \
+      --link trackdb:trackdb -e DB_URL="jdbc:mysql://trackdb:3306/track"  \
+      test/vessel-track
 
 
 ## REST API ##

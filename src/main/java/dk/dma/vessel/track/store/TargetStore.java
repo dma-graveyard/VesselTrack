@@ -77,6 +77,7 @@ public class TargetStore {
 
     boolean stopped;
     boolean started;
+    boolean saving;
 
     /**
      * Called when the store is initialized
@@ -158,7 +159,7 @@ public class TargetStore {
     @Transactional
     public void periodicallyExpirePastTracks() {
         // Only master instance expires past tracks
-        if (slave) {
+        if (slave || stopped) {
             return;
         }
 
@@ -183,7 +184,7 @@ public class TargetStore {
     @SuppressWarnings("all")
     public void periodicallyLoadFromDB() {
         // Only slave instances loads data periodically from the DB
-        if (slave) {
+        if (slave && !stopped) {
             loadFromDB();
         }
     }
@@ -197,10 +198,11 @@ public class TargetStore {
     @SuppressWarnings("all")
     public void periodicallySaveToDB() {
         // Only master instances saves data periodically to the DB
-        if (slave) {
+        if (slave || saving) {
             return;
         }
 
+        saving = true;
         try {
             long t0 = System.currentTimeMillis();
             int cntNewTargets = 0, cntUpdatedTargets = 0, cntNewPastTrack = 0;
@@ -249,6 +251,7 @@ public class TargetStore {
         } catch (Exception e) {
             LOG.error("Error saving to database", e);
         }
+        saving = false;
     }
 
     /**

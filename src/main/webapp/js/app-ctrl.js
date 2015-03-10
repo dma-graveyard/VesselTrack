@@ -90,7 +90,8 @@ angular.module('vesseltrack.app')
             var googleMapsLayer = new OpenLayers.Layer.Google(
                 "Google", {
                     type: google.maps.MapTypeId.HYBRID,
-                    numZoomLevels: 20
+                    numZoomLevels: 20,
+                    animationEnabled: false
                 });
 
             var vesselLayer = new OpenLayers.Layer.Vector("Vessels", {

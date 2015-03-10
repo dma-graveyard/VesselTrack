@@ -20,7 +20,7 @@ fi
 if [ -z "${AISBUS_FILTER}" ]; then
 	AISBUS_FILTER=""
 else
-	AISBUS_FILTERP="--aisbusFilter=${AISBUS_FILTER}"
+	AISBUS_FILTERP="--aisbusFilter=\"${AISBUS_FILTER}\""
 fi
 
 LATEST=`ls /archive/target/vessel-track*SNAPSHOT.war`
